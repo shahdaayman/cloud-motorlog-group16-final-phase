@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head>
+  <link rel="icon" type="image/png" href="/motorlog-favicon.png?v=1">
+<link rel="shortcut icon" href="/motorlog-favicon.ico?v=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0d1727"><meta name="description" content="Car Maintenance Log — a secure cloud-powered home for vehicle care, fuel, costs and reminders"><title>Motorlog — Car Maintenance Log</title><link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/confirm-dialog.css"><link rel="stylesheet" href="css/auth.css"><link rel="stylesheet" href="css/auth-remember.css"><link rel="stylesheet" href="css/account-delete.css"></head>
+<body>
+<div id="app" class="app-shell is-locked">
+ <aside class="sidebar" id="sidebar">
+   <a class="brand" href="#dashboard" aria-label="Motorlog home"><span class="brand-mark">M<span class="brand-dot">.</span></span><span class="brand-word">motorlog<span>.</span><small>YOUR VEHICLE, IN FOCUS</small></span></a>
+   <div class="menu-label">WORKSPACE</div><nav class="side-nav" aria-label="Main navigation">
+     <button class="nav-link active" data-view="dashboard"><span class="nav-symbol">▦</span> Overview</button>
+     <button class="nav-link" data-view="vehicles"><span class="nav-symbol">▰</span> My vehicles</button>
+     <button class="nav-link" data-view="maintenance"><span class="nav-symbol">⚒</span> Maintenance</button>
+     <button class="nav-link" data-view="fuel"><span class="nav-symbol">◉</span> Fuel log</button>
+     <button class="nav-link" data-view="expenses"><span class="nav-symbol">▤</span> Expenses</button>
+     <button class="nav-link" data-view="reminders"><span class="nav-symbol">◷</span> Reminders <span id="nav-due" class="count-dot hidden">0</span></button>
+     <button class="nav-link" data-view="analytics"><span class="nav-symbol">▥</span> Analytics</button>
+     <button class="nav-link" data-view="account"><span class="nav-symbol">⚙</span> Account Settings</button>
+   </nav>
+ </aside>
+ <div class="content-area">
+   <header class="topbar"><div class="top-left"><button id="menu-toggle" class="mobile-menu" aria-label="Toggle navigation">☰</button><span class="breadcrumb-parent">Workspace</span><span class="crumb-divider">/</span><span id="breadcrumb" class="breadcrumb-current">Overview</span></div><div class="top-right"><button id="header-user" class="avatar" title="Account menu">U</button><button id="logout-btn" class="signout" title="Sign out">Log out</button></div></header>
+   <main class="main-content" id="main-content"><div class="empty-loading">Loading your workspace…</div></main>
+   <footer class="app-footer"><span>© 2026 Motorlog · Car Maintenance Log</span><span>Cloud-powered vehicle management</span></footer>
+ </div>
+</div>
+<div class="auth-screen" id="auth-screen"><section class="auth-art" aria-label="Motorlog introduction"><div class="art-glow"></div><div class="auth-grid-lines"></div><div class="auth-art-inner"><div class="mini-brand"><span class="mini-mark">M.</span><span>motorlog.</span></div><div class="auth-hero"><span class="eyebrow-light">THE ROAD AHEAD, ORGANIZED</span><h1>Everything your car needs.<br><em>One clear place.</em></h1><p>Keep every vehicle, service, cost and reminder organized in a secure cloud workspace.</p><div class="auth-benefits"><div><span>01</span><strong>Complete history</strong><small>Maintenance and costs together</small></div><div><span>02</span><strong>Timely reminders</strong><small>Never miss important service</small></div><div><span>03</span><strong>Private by design</strong><small>Cognito-protected access</small></div></div></div><div class="art-bottom"><span>SECURE</span><i></i><span>SMART</span><i></i><span>SIMPLE</span></div></div></section>
+ <section class="auth-panel"><div class="auth-mobile-logo"><span class="mini-mark">M.</span><strong>motorlog.</strong></div><div class="auth-box"><div class="auth-card"><span class="auth-kicker">WELCOME TO MOTORLOG</span><h2 id="auth-heading">Sign in to your account</h2><p id="auth-subtitle" class="auth-subtitle">Manage your garage, maintenance and spending in one place.</p><form id="auth-form" class="auth-form" novalidate><div id="auth-fields"></div><div id="auth-error" class="auth-message error hidden" role="alert" aria-live="assertive"></div><button class="auth-submit" id="auth-submit" type="submit"><span class="auth-submit-label">Sign in securely</span><span class="auth-submit-arrow" aria-hidden="true">→</span></button></form><div id="auth-footer" class="auth-footer"></div></div></div></section>
+</div>
+<div id="modal-backdrop" class="modal-backdrop hidden"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-top"><div><span class="eyebrow" id="modal-eyebrow">NEW RECORD</span><h2 id="modal-title">Add record</h2></div><button class="icon-button" id="modal-close" aria-label="Close dialog">✕</button></div><form id="record-form"><div id="modal-fields" class="modal-fields"></div><p id="modal-error" class="form-error hidden" role="alert"></p><div class="modal-actions"><button type="button" id="modal-cancel" class="btn ghost">Cancel</button><button type="submit" id="modal-save" class="btn primary">Save record</button></div></form></div></div>
+<dialog id="confirm-dialog" class="motorlog-confirm" aria-labelledby="confirm-title" aria-describedby="confirm-message"><form method="dialog"><div class="motorlog-confirm-icon">!</div><div class="motorlog-confirm-copy"><span class="eyebrow">CONFIRM ACTION</span><h2 id="confirm-title">Confirm action</h2><p id="confirm-message"></p><div id="delete-confirm-fields" class="delete-confirm-fields" hidden><label for="delete-confirm-input">Type <strong>DELETE</strong> to continue</label><input id="delete-confirm-input" autocomplete="off" spellcheck="false"><small id="delete-progress" aria-live="polite"></small></div></div><div class="motorlog-confirm-actions"><button value="cancel" class="btn ghost">Cancel</button><button value="confirm" class="btn danger" id="confirm-accept">Confirm</button></div></form></dialog>
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+<script src="js/config.js"></script><script src="js/hash-router.js?v=20261118-nav2"></script><script src="js/app.js?v=20261118-nav2"></script>
+</body></html>
