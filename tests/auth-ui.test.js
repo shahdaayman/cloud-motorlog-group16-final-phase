@@ -1,0 +1,21 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const html=fs.readFileSync(path.join(root,'frontend/index.html'),'utf8');
+const js=fs.readFileSync(path.join(root,'frontend/js/app.js'),'utf8');
+const css=fs.readFileSync(path.join(root,'frontend/css/auth.css'),'utf8');
+const rememberCss=fs.readFileSync(path.join(root,'frontend/css/auth-remember.css'),'utf8');
+
+test('authentication page loads its dedicated scoped stylesheet and professional shell',()=>{assert.match(html,/href="css\/auth\.css"/);assert.match(html,/class="auth-card"/);assert.match(html,/class="auth-benefits"/);assert.match(html,/id="auth-error"[^>]*aria-live="assertive"/);});
+test('all existing authentication modes share the redesigned renderer',()=>{for(const mode of ['signin','register','confirm','otp','forgot','reset'])assert.match(js,new RegExp(`mode==='${mode}'`));assert.match(js,/auth-screen'\)\.dataset\.mode/);});
+test('authentication endpoints and role redirects remain unchanged',()=>{for(const route of ['/api/auth/register','/api/auth/confirm','/api/auth/resend-confirmation','/api/auth/login','/api/auth/verify-otp','/api/auth/forgot-password','/api/auth/reset-password'])assert.ok(js.includes(route),`missing ${route}`);assert.match(js,/cognito:groups/);assert.match(js,/window\.location\.assign\('\/admin\/'\)/);});
+test('unfinished signup recovery is distinct from login MFA and survives reopening',()=>{assert.doesNotMatch(js,/Finish registration/);assert.match(js,/resend-signup-code/);assert.match(js,/motorlog_pending_signup_email/);assert.match(js,/ACCOUNT_NOT_CONFIRMED/);assert.match(js,/motorlog_signup_resend_at/);assert.match(js,/Signup verification code/);assert.match(js,/if\(mode==='otp'\)/);});
+test('password fields provide accessible visibility controls',()=>{assert.match(js,/data-toggle-password/);assert.match(js,/aria-label="Show password"/);assert.match(js,/input\.type=showing\?'password':'text'/);assert.match(css,/\.password-toggle:focus-visible/);});
+test('auth submission exposes validation and loading states',()=>{assert.match(js,/checkValidity\(\)/);assert.match(js,/reportValidity\(\)/);assert.match(js,/classList\.add\('is-loading'\)/);assert.match(js,/aria-busy/);assert.match(css,/\.auth-submit\.is-loading/);});
+test('auth design preserves Motorlog branding and mobile responsiveness',()=>{assert.match(css,/#0d1b2d/);assert.match(css,/#25b992/);assert.match(css,/@media\(max-width:820px\)/);assert.match(css,/@media\(max-width:480px\)/);assert.match(css,/border-radius:24px/);});
+test('remember email preference persists only the email and can be removed',()=>{assert.match(html,/auth-remember\.css/);assert.match(js,/name="rememberEmail"/);assert.match(js,/Remember my email/);assert.match(js,/localStorage\.setItem\('motorlog_remembered_email',email\)/);assert.match(js,/localStorage\.removeItem\('motorlog_remembered_email'\)/);assert.match(js,/state\.email=rememberedEmail\(\)/);const storedKeys=[...js.matchAll(/localStorage\.setItem\('([^']+)'/g)].map(match=>match[1]);assert.ok(storedKeys.length>0);assert.equal(storedKeys.some(key=>/password|token|session/i.test(key)),false);assert.match(rememberCss,/accent-color:\s*#25b992/);assert.match(rememberCss,/focus-visible/);});
+test('login and signup expose password-manager autocomplete semantics',()=>{assert.match(js,/autocomplete:'username'/);assert.match(js,/autocomplete:'current-password'/);assert.match(js,/autocomplete:'new-password'/);assert.match(html,/<form id="auth-form"/);assert.match(html,/type="submit"/);});
+test('remember email does not alter Cognito MFA, expiry, logout, or role routing',()=>{assert.match(js,/if\(data\.mfaRequired\)/);assert.match(js,/\/api\/auth\/verify-otp/);assert.match(js,/!claims\.exp\|\|claims\.exp\*1000<=Date\.now\(\)/);assert.match(js,/async function logout/);assert.match(js,/cognito:groups/);assert.match(js,/window\.location\.assign\('\/admin\/'\)/);});
+test('server Retry-After is displayed as an authentication cooldown',()=>{assert.match(js,/response\.headers\.get\('Retry-After'\)/);assert.match(js,/Try again in/);assert.match(js,/error\.retryAfter=retryAfter/);});
