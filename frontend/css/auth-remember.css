@@ -1,0 +1,30 @@
+.auth-art .art-bottom {
+  margin-top: 20px;
+  padding-bottom: 4px;
+  flex-shrink: 0;
+}
+.remember-email {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 9px;
+  margin: 0 0 17px !important;
+  color: #5f6f82 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+}
+.remember-email input {
+  appearance: auto !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  accent-color: #25b992;
+  cursor: pointer;
+}
+.remember-email:focus-within { color: #16856a !important; }
+.remember-email input:focus-visible {
+  outline: 3px solid rgba(37,185,146,.25);
+  outline-offset: 2px;
+}

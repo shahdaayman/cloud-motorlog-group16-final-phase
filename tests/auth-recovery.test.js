@@ -1,0 +1,16 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const express=require('express');
+const authRoutes=require('../backend/services/vehicles/auth-routes');
+const {sendError}=require('../backend/shared/errors');
+
+async function withServer(send,run){const original=authRoutes.authClient.send;authRoutes.authClient.send=send;const app=express();app.use(express.json());app.use('/api',authRoutes);app.use(sendError);const server=await new Promise(resolve=>{const value=app.listen(0,'127.0.0.1',()=>resolve(value));});try{return await run(`http://127.0.0.1:${server.address().port}`);}finally{authRoutes.authClient.send=original;await new Promise(resolve=>server.close(resolve));}}
+const post=(base,path,body)=>fetch(base+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+
+test('existing signup automatically requests a fresh code without creating or deleting an account',()=>{const commands=[];return withServer(async command=>{commands.push(command.constructor.name);if(command.constructor.name==='SignUpCommand')throw Object.assign(new Error('exists'),{name:'UsernameExistsException'});if(command.constructor.name==='ResendConfirmationCodeCommand')return {CodeDeliveryDetails:{Destination:'p***@example.com'}};throw new Error(`Unexpected ${command.constructor.name}`);},async base=>{const response=await post(base,'/api/auth/register',{email:'pending@example.com',password:'StrongPassword123'});assert.equal(response.status,201);const body=await response.json();assert.equal(body.nextStep,'CONFIRM_SIGNUP');assert.doesNotMatch(body.message,/already exists/i);assert.deepEqual(commands,['SignUpCommand','ResendConfirmationCodeCommand']);});});
+
+test('resend endpoint uses Cognito ResendConfirmationCode and returns a generic response',()=>withServer(async command=>{assert.equal(command.constructor.name,'ResendConfirmationCodeCommand');assert.equal(command.input.Username,'pending@example.com');return {CodeDeliveryDetails:{Destination:'p***@example.com'}};},async base=>{const response=await post(base,'/api/auth/resend-confirmation',{email:'pending@example.com'});assert.equal(response.status,200);assert.match((await response.json()).message,/If this registration/i);}));
+
+test('login exposes a controlled account-not-confirmed recovery signal',()=>withServer(async command=>{assert.equal(command.constructor.name,'InitiateAuthCommand');throw Object.assign(new Error('raw provider text'),{name:'UserNotConfirmedException'});},async base=>{const response=await post(base,'/api/auth/login',{email:'pending@example.com',password:'StrongPassword123'});assert.equal(response.status,403);assert.deepEqual(await response.json(),{error:{code:'ACCOUNT_NOT_CONFIRMED',message:'Finish email verification before signing in.'}});}));
+
+test('confirmation code errors have clear safe messages',()=>withServer(async()=>{throw Object.assign(new Error('provider detail'),{name:'ExpiredCodeException'});},async base=>{const response=await post(base,'/api/auth/confirm',{email:'pending@example.com',code:'123456'});assert.equal(response.status,401);assert.deepEqual(await response.json(),{error:{code:'ExpiredCodeException',message:'The verification code has expired. Request a new code.'}});}));
