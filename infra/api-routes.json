@@ -1,0 +1,20 @@
+{
+  "notes": "Route manifest for a later HTTP API Gateway deployment. All three services deploy independently. API Gateway verifies route existence, but the Express middleware enforces authentication.",
+  "vehicles": [
+    "GET /api/health", "POST /api/auth/register", "POST /api/auth/confirm", "POST /api/auth/resend-confirmation", "POST /api/auth/login", "POST /api/auth/verify-otp", "POST /api/auth/forgot-password", "POST /api/auth/reset-password", "POST /api/auth/logout",
+    "GET /api/vehicles", "POST /api/vehicles", "POST /api/vehicles/decode-vin", "GET /api/vehicles/{id}", "PATCH /api/vehicles/{id}", "DELETE /api/vehicles/{id}",
+    "GET /api/vehicles/{vehicleId}/maintenance", "POST /api/vehicles/{vehicleId}/maintenance", "PATCH /api/maintenance/{id}", "DELETE /api/maintenance/{id}",
+    "DELETE /api/auth/account",
+    "GET /api/admin/overview", "GET /api/admin/users", "GET /api/admin/users/{id}", "PATCH /api/admin/users/{id}/status", "PATCH /api/admin/users/{id}/role", "DELETE /api/admin/users/{id}",
+    "GET /api/admin/activity", "GET /api/admin/audit", "GET /api/admin/notifications", "GET /api/admin/health", "GET /api/admin/security"
+  ],
+  "fuel": [
+    "GET /api/vehicles/{vehicleId}/fuel", "POST /api/vehicles/{vehicleId}/fuel", "PATCH /api/fuel/{id}", "DELETE /api/fuel/{id}",
+    "GET /api/vehicles/{vehicleId}/expenses", "POST /api/vehicles/{vehicleId}/expenses", "PATCH /api/expenses/{id}", "DELETE /api/expenses/{id}",
+    "GET /api/vehicles/{vehicleId}/fuel-economy", "GET /api/vehicles/{vehicleId}/costs"
+  ],
+  "reminders": [
+    "POST /api/vehicles/{vehicleId}/reminders", "GET /api/reminders", "PATCH /api/reminders/{id}", "DELETE /api/reminders/{id}",
+    "GET /api/analytics/summary", "GET /api/analytics/monthly", "GET /api/analytics/maintenance"
+  ]
+}

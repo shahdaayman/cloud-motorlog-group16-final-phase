@@ -1,0 +1,33 @@
+name: motorlog-floci
+
+services:
+  floci:
+    image: floci/floci:latest
+    container_name: motorlog-floci
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      FLOCI_STORAGE_MODE: persistent
+      FLOCI_STORAGE_PERSISTENT_PATH: /floci-data
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - motorlog-floci-data:/floci-data
+    networks:
+      motorlog:
+        aliases:
+          - floci
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+networks:
+  motorlog:
+    name: motorlog-floci-network
+
+volumes:
+  motorlog-floci-data:
+    name: motorlog-floci-data

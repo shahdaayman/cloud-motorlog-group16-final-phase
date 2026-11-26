@@ -1,0 +1,31 @@
+services:
+  floci:
+    environment:
+      FLOCI_SERVICES_SES_SMTP_HOST: motorlog-smtp-bridge
+      FLOCI_SERVICES_SES_SMTP_PORT: "1025"
+      FLOCI_SERVICES_SES_SMTP_STARTTLS: DISABLED
+    depends_on:
+      motorlog-html-delivery:
+        condition: service_healthy
+
+  motorlog-html-delivery:
+    build:
+      context: ../../smtp-bridge
+    restart: unless-stopped
+    environment:
+      SMTP_EMAIL: ${SMTP_EMAIL:-}
+      SMTP_APP_PASSWORD: ${SMTP_APP_PASSWORD:-}
+      SMTP_ALLOW_ANY_RECIPIENT: ${SMTP_ALLOW_ANY_RECIPIENT:-false}
+      SMTP_ALLOWED_RECIPIENTS: ${SMTP_ALLOWED_RECIPIENTS:-}
+    expose:
+      - "1025"
+    networks:
+      motorlog:
+        aliases:
+          - motorlog-smtp-bridge
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
