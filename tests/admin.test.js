@@ -70,7 +70,7 @@ test('no frontend feature uses browser-native alert, confirm, or prompt dialogs'
 
 test('authenticated sessions survive refresh and are cleared on logout',()=>{
  const app=fs.readFileSync(path.join(root,'frontend/js/app.js'),'utf8');const admin=fs.readFileSync(path.join(root,'frontend/js/admin.js'),'utf8');const store=fs.readFileSync(path.join(root,'frontend/js/session-store.js'),'utf8');
- assert.match(store,/session\.setItem\('motorlog_session_token'/);assert.match(store,/motorlog_persistent_token/);assert.match(app,/async function restoreSession/);assert.match(app,/claims\.exp\*1000<=Date\.now\(\)/);assert.match(app,/clearStoredSession\(\)/);
+ assert.match(store,/session\.setItem\('motorlog_session_token'/);assert.match(store,/motorlog_persistent_token/);assert.match(app,/function restoreSession\(\)/);assert.match(app,/if\(restorePromise\)return restorePromise/);assert.match(app,/claims\.exp\*1000>Date\.now\(\)/);assert.match(app,/clearStoredSession\(/);
  assert.match(admin,/MotorlogSessionStore\.read/);assert.match(admin,/MotorlogSessionStore\.clear/);
  assert.match(admin,/claims\.exp\*1000<=Date\.now\(\)/);assert.match(admin,/claims\['cognito:groups'\].*includes\('Admin'\)/);
  assert.doesNotMatch(app,/restoreSession[\s\S]{0,300}logout\s*\(/);
