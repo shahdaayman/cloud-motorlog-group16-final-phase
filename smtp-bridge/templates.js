@@ -15,14 +15,21 @@ function classifyAuthenticationEmail(mail) {
   const subject = String(mail.subject || '');
   const body = `${mail.text || ''} ${mail.html || ''}`;
   const content = `${subject} ${body}`.toLowerCase();
-  if (!/\{####\}|\b\d{4,8}\b/.test(body)) return null;
+  if (!extractCode(mail)) return null;
   if (/sign[ -]?in|login|log in|mfa|multi-factor|authentication code/.test(content)) return 'login';
   if (/confirm|confirmation|verify|verification|welcome|sign[ -]?up|register/.test(content)) return 'signup';
   return null;
 }
 
 function extractCode(mail) {
-  const match = `${mail.text || ''} ${mail.html || ''}`.match(/\{####\}|\b\d{4,8}\b/);
+  // Cognito can send an HTML template in the MIME text part. Search only
+  // visible text so CSS values such as #697891 can never become the OTP.
+  const visible = `${mail.text || ''} ${mail.html || ''}`
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&(?:amp|lt|gt|quot|#39);/gi, ' ');
+  const match = visible.match(/\{####\}|\b\d{4,8}\b/);
   return match ? match[0] : null;
 }
 

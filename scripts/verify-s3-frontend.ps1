@@ -1,7 +1,7 @@
 . (Join-Path $PSScriptRoot 'cloud-common.ps1')
 $bucket='motorlog-frontend';$out=Join-Path $ProjectRoot 'dist\s3-verification';New-Item -ItemType Directory -Force -Path $out|Out-Null
 $objects=Invoke-Aws s3api list-objects-v2 --bucket $bucket|ConvertFrom-Json;$keys=@($objects.Contents|ForEach-Object Key)
-$required=@('index.html','admin/index.html','js/config.js','js/app.js','js/admin.js','css/styles.css','css/admin.css')
+$required=@('index.html','admin/index.html','js/config.js','js/secure-uuid.js','js/session-store.js','js/app.js','js/admin.js','css/styles.css','css/admin.css')
 foreach($key in $required){if($keys -notcontains $key){throw "Missing required object: $key"};$safe=$key.Replace('/','-');Invoke-Aws s3api get-object --bucket $bucket --key $key (Join-Path $out $safe)|Out-Null;Write-Host "PASS retrieved $key"}
 $bad=@($keys|Where-Object{$_ -match '(^|/)(\.env|node_modules|backend|tests?|dist|package(-lock)?\.json|.*\.(zip|pem|key))($|/)'});if($bad){throw "Sensitive or non-frontend keys found: $($bad -join ', ')"}
 $html=Get-Content -LiteralPath (Join-Path $out 'index.html') -Raw;$admin=Get-Content -LiteralPath (Join-Path $out 'admin-index.html') -Raw;$config=Get-Content -LiteralPath (Join-Path $out 'js-config.js') -Raw

@@ -1,0 +1,28 @@
+{
+    "loadBalancerName":  "motorlog-alb",
+    "loadBalancerArn":  "arn:aws:elasticloadbalancing:us-east-1:000000000000:loadbalancer/app/motorlog-alb/66aa88404b674e86",
+    "dnsName":  "motorlog-alb-66aa88404b674e86.elb.localhost.floci.io",
+    "url":  "http://motorlog-alb-66aa88404b674e86.elb.localhost.floci.io:4510",
+    "listenerArn":  "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener/app/motorlog-alb/66aa88404b674e86/0a438e762eeb4922",
+    "listenerPort":  80,
+    "targetGroupName":  "motorlog-http-targets",
+    "targetGroupArn":  "arn:aws:elasticloadbalancing:us-east-1:000000000000:targetgroup/motorlog-http-targets/05ddfa80ecbf4b08",
+    "targetIp":  "192.168.65.254",
+    "flociContainer":  "motorlog-floci",
+    "dockerNetwork":  "motorlog-floci-network",
+    "targetCorsConfigured":  true,
+    "targets":  [
+                    {
+                        "id":  "motorlog-a",
+                        "port":  3101
+                    },
+                    {
+                        "id":  "motorlog-b",
+                        "port":  3102
+                    },
+                    {
+                        "id":  "motorlog-c",
+                        "port":  3103
+                    }
+                ]
+}

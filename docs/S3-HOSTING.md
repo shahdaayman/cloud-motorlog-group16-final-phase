@@ -7,7 +7,7 @@ The bucket is `motorlog-frontend` in `us-east-1`. Deployment uploads only allow-
 The source `frontend/js/config.js` remains same-origin for `http://localhost:3000`.
 During S3 deployment, `Get-MotorlogApiDeployment` discovers the current `motorlog-api`
 ID and its deployed stage from Floci. The upload receives a public, non-secret API URL
-in the form `http://localhost:4566/restapis/<API_ID>/<STAGE>/_user_request_`. No API ID
+in the Floci hostname form `http://<API_ID>.execute-api.localhost.localstack.cloud:4566/<STAGE>`. No API ID
 or stage is hardcoded.
 
 Authentication remains enforced by Cognito-backed middleware in the Lambda services. Access and MFA tokens stay in browser session storage and are never uploaded to S3.

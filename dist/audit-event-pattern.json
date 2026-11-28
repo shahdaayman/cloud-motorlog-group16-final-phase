@@ -1,0 +1,10 @@
+{
+    "detail-type":  [
+                        "VehicleCreated",
+                        "MaintenanceAdded",
+                        "ReminderCompleted"
+                    ],
+    "source":  [
+                   "motorlog.application"
+               ]
+}

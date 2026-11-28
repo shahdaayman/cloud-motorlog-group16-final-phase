@@ -1,0 +1,11 @@
+const {createHash}=require('node:crypto');
+const {GetUserCommand}=require('@aws-sdk/client-cognito-identity-provider');
+const {SendMessageCommand}=require('@aws-sdk/client-sqs');
+const {bad,forbidden}=require('../../shared/errors');
+
+function reminderId(ownerId,vehicleId,key){const hex=createHash('sha256').update(`${ownerId}\0${vehicleId}\0${key}`).digest('hex');return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;}
+function requestKey(req){const key=String(req.get('Idempotency-Key')||'').trim();if(!/^[A-Za-z0-9._:-]{16,100}$/.test(key))throw bad('Idempotency-Key must contain 16-100 safe characters');return key;}
+function attributes(output){return Object.fromEntries((output.UserAttributes||[]).map(item=>[item.Name,item.Value]));}
+async function verifiedEmail(idp,user){const account=attributes(await idp.send(new GetUserCommand({AccessToken:user.accessToken}))),verified=account.email_verified==='true'||account.email_verified===true;if(!verified||!account.email||account.email.toLowerCase()!==String(user.email||'').toLowerCase())throw forbidden('A verified account email is required');return account.email;}
+async function queueConfirmation({store,sqs,queueUrl,reminder,email,key}){if(!queueUrl)throw new Error('NOTIFICATION_QUEUE_URL not configured');if(['QUEUED','PROCESSING','SES_ACCEPTED'].includes(reminder.confirmationEmailStatus))return {queued:true,reused:true};const queuedAt=new Date().toISOString();try{await sqs.send(new SendMessageCommand({QueueUrl:queueUrl,MessageBody:JSON.stringify({type:'REMINDER_CREATED',reminderId:reminder.id,ownerId:reminder.ownerId,confirmationId:key,verifiedEmail:email})}));}catch(error){await store.patch('Reminders',reminder.id,{confirmationEmailStatus:'PENDING_QUEUE',confirmationUpdatedAt:queuedAt,confirmationFailureCode:String(error.name||'QueueError').slice(0,80)}).catch(()=>{});return {queued:false,reused:false};}await store.patch('Reminders',reminder.id,{confirmationEmailStatus:'QUEUED',confirmationQueuedAt:queuedAt,confirmationFailureCode:null}).catch(error=>console.error(JSON.stringify({type:'confirmation_status_update_failed',reminderId:reminder.id,error:error.name||'Error'})));return {queued:true,reused:false};}
+module.exports={reminderId,requestKey,verifiedEmail,queueConfirmation};

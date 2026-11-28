@@ -27,9 +27,9 @@ test('admin mutations contain self and last-admin protections',()=>{
  assert.match(routes,/Cannot disable your own account/);assert.match(routes,/Cannot remove your own administrator privileges/);assert.match(routes,/Cannot disable the last active administrator/);assert.match(routes,/Cannot remove the last active administrator/);
 });
 
-test('admin login routing uses the verified token group claim',()=>{
+test('admin login routing uses the backend-validated session role',()=>{
  const app=fs.readFileSync(path.join(root,'frontend/js/app.js'),'utf8');
- assert.match(app,/claims\['cognito:groups'\]/);assert.match(app,/window\.location\.assign\('\/admin\/'\)/);
+ assert.match(app,/await get\('\/api\/auth\/session'\)/);assert.match(app,/profile\.isAdmin===true/);assert.match(app,/window\.location\.assign\('\/admin\/'\)/);
 });
 
 function fakeCognito({groupFailure=false}={}){return {async send(command){const name=command.constructor.name;if(name==='ListUsersCommand')return {Users:[{Username:'internal-admin-name',Attributes:[{Name:'sub',Value:'admin-sub'},{Name:'email',Value:'admin@example.com'}]},{Username:'different-user-name',Attributes:[{Name:'sub',Value:'user-sub'},{Name:'email',Value:'user@example.com'}]}]};if(name==='ListUsersInGroupCommand'){if(groupFailure)throw Object.assign(new Error('unsupported'),{name:'UnsupportedOperation'});return {Users:[{Username:'internal-admin-name',Attributes:[{Name:'sub',Value:'admin-sub'}]}]};}if(name==='AdminListGroupsForUserCommand'){if(command.input.Username==='internal-admin-name')return {Groups:[{GroupName:'Admin'}]};return {Groups:[]};}throw new Error(`Unexpected command ${name}`);}};}
@@ -69,9 +69,9 @@ test('no frontend feature uses browser-native alert, confirm, or prompt dialogs'
 });
 
 test('authenticated sessions survive refresh and are cleared on logout',()=>{
- const app=fs.readFileSync(path.join(root,'frontend/js/app.js'),'utf8');const admin=fs.readFileSync(path.join(root,'frontend/js/admin.js'),'utf8');
- assert.match(app,/sessionStorage\.setItem\('motorlog_session_token'/);assert.match(app,/async function restoreSession/);assert.match(app,/claims\.exp\*1000<=Date\.now\(\)/);assert.match(app,/clearStoredSession\(\)/);
- assert.match(admin,/motorlog_session_token/);assert.match(admin,/removeItem\('motorlog_session_token'\)/);
+ const app=fs.readFileSync(path.join(root,'frontend/js/app.js'),'utf8');const admin=fs.readFileSync(path.join(root,'frontend/js/admin.js'),'utf8');const store=fs.readFileSync(path.join(root,'frontend/js/session-store.js'),'utf8');
+ assert.match(store,/session\.setItem\('motorlog_session_token'/);assert.match(store,/motorlog_persistent_token/);assert.match(app,/async function restoreSession/);assert.match(app,/claims\.exp\*1000<=Date\.now\(\)/);assert.match(app,/clearStoredSession\(\)/);
+ assert.match(admin,/MotorlogSessionStore\.read/);assert.match(admin,/MotorlogSessionStore\.clear/);
  assert.match(admin,/claims\.exp\*1000<=Date\.now\(\)/);assert.match(admin,/claims\['cognito:groups'\].*includes\('Admin'\)/);
  assert.doesNotMatch(app,/restoreSession[\s\S]{0,300}logout\s*\(/);
 });

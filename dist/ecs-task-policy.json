@@ -1,0 +1,20 @@
+{
+    "Version":  "2012-10-17",
+    "Statement":  [
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "arn:aws:events:us-east-1:000000000000:event-bus/motorlog-event-bus",
+                          "Action":  "events:PutEvents"
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "arn:aws:sns:us-east-1:000000000000:motorlog-notifications-topic",
+                          "Action":  "sns:Publish"
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "arn:aws:secretsmanager:us-east-1:000000000000:secret:motorlog-app/config-IZGG5C",
+                          "Action":  "secretsmanager:GetSecretValue"
+                      }
+                  ]
+}

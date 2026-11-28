@@ -2,7 +2,8 @@
 $infoPath = Get-DeploymentInfoPath
 if (-not (Test-Path -LiteralPath $infoPath)) { throw 'Deployment information is missing.' }
 $info = Get-Content -LiteralPath $infoPath -Raw | ConvertFrom-Json
-if(-not $info.invokeUrl){$apis=Invoke-Aws apigateway get-rest-apis --limit 500|ConvertFrom-Json;$api=@($apis.items|Where-Object name -eq 'motorlog-api')[0];if(-not $api){throw 'motorlog-api was not found'};$info|Add-Member -Force NoteProperty invokeUrl "$FlociUrl/restapis/$($api.id)/dev/_user_request_"}
+$apiDeployment=Get-MotorlogApiDeployment
+$info|Add-Member -Force NoteProperty invokeUrl $apiDeployment.url
 $payloadPath = Join-Path $ProjectRoot 'dist\lambda-health-event.json'
 $responsePath = Join-Path $ProjectRoot 'dist\lambda-response.json'
 Write-JsonFile $payloadPath @{version='2.0';routeKey='GET /api/health';rawPath='/api/health';rawQueryString='';headers=@{host='localhost'};requestContext=@{http=@{method='GET';path='/api/health';sourceIp='127.0.0.1';protocol='HTTP/1.1'}};isBase64Encoded=$false}

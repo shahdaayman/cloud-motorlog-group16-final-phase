@@ -1,0 +1,322 @@
+{
+    "region":  "us-east-1",
+    "endpoint":  "http://localhost:4566",
+    "functions":  {
+                      "vehicles":  "cml-vehicles",
+                      "fuel":  "cml-fuel",
+                      "reminders":  "cml-reminders"
+                  },
+    "deployedAt":  "2026-11-28T00:11:31.9408691Z",
+    "apiId":  "07be393592",
+    "stage":  "dev",
+    "invokeUrl":  "http://07be393592.execute-api.localhost.localstack.cloud:4566/dev",
+    "routes":  [
+                   {
+                       "method":  "GET",
+                       "path":  "/api/health",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/register",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/confirm",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/resend-confirmation",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/login",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/verify-otp",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/forgot-password",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/reset-password",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/auth/session",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/auth/logout",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/vehicles",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/vehicles",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/vehicles/decode-vin",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/vehicles/{id}",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "PATCH",
+                       "path":  "/api/vehicles/{id}",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "DELETE",
+                       "path":  "/api/vehicles/{id}",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/vehicles/{vehicleId}/maintenance",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/vehicles/{vehicleId}/maintenance",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "PATCH",
+                       "path":  "/api/maintenance/{id}",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "DELETE",
+                       "path":  "/api/maintenance/{id}",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "DELETE",
+                       "path":  "/api/auth/account",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/overview",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/users",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/users/{id}",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "PATCH",
+                       "path":  "/api/admin/users/{id}/status",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "PATCH",
+                       "path":  "/api/admin/users/{id}/role",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "DELETE",
+                       "path":  "/api/admin/users/{id}",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/activity",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/audit",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/notifications",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/health",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/admin/security",
+                       "service":  "vehicles",
+                       "function":  "cml-vehicles"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/vehicles/{vehicleId}/fuel",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/vehicles/{vehicleId}/fuel",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "PATCH",
+                       "path":  "/api/fuel/{id}",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "DELETE",
+                       "path":  "/api/fuel/{id}",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/vehicles/{vehicleId}/expenses",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/vehicles/{vehicleId}/expenses",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "PATCH",
+                       "path":  "/api/expenses/{id}",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "DELETE",
+                       "path":  "/api/expenses/{id}",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/vehicles/{vehicleId}/fuel-economy",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/vehicles/{vehicleId}/costs",
+                       "service":  "fuel",
+                       "function":  "cml-fuel"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/vehicles/{vehicleId}/reminders",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/reminders",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "PATCH",
+                       "path":  "/api/reminders/{id}",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "DELETE",
+                       "path":  "/api/reminders/{id}",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "POST",
+                       "path":  "/api/reminders/{id}/test-email",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/reminders/{id}/test-email-status",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/analytics/summary",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/analytics/monthly",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   },
+                   {
+                       "method":  "GET",
+                       "path":  "/api/analytics/maintenance",
+                       "service":  "reminders",
+                       "function":  "cml-reminders"
+                   }
+               ],
+    "apiDeploymentId":  "d74aee207a"
+}

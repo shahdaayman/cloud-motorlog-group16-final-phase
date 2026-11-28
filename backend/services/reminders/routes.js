@@ -1,12 +1,17 @@
 const express=require('express');
-const {randomUUID}=require('node:crypto');
 const db=require('../../shared/db');
 const {authenticate}=require('../../shared/auth');
 const {asyncRoute,bad}=require('../../shared/errors');
 const v=require('../../shared/validate');
 const {reminderState,monthlyCosts,costSummary,completionRate}=require('../../shared/calc');
 const {publishEvent}=require('../../shared/cloud-events');
+const {CognitoIdentityProviderClient}=require('@aws-sdk/client-cognito-identity-provider');
+const {SQSClient}=require('@aws-sdk/client-sqs');
+const {awsOptions}=require('../../shared/config');
+const {requestManualTest,publicStatus}=require('./manual-test-email');
+const {reminderId,requestKey,verifiedEmail,queueConfirmation}=require('./confirmation');
 const r=express.Router();r.use(authenticate);
+r.testEmailDependencies={store:db,idp:new CognitoIdentityProviderClient(awsOptions),sqs:new SQSClient(awsOptions)};
 const now=()=>new Date().toISOString();
 function parseReminder(body,partial=false){v.assertFields(body,['title','dueDate','dueMileageKm','notes','status']);const o={};
   if(!partial||body.title!==undefined)o.title=v.str(body.title,'title',3,100);
@@ -16,7 +21,7 @@ function parseReminder(body,partial=false){v.assertFields(body,['title','dueDate
   if(body.status!==undefined)o.status=v.enumValue(body.status,'status',['Open','Completed']);
   if(!partial&&!body.dueDate&&body.dueMileageKm==null)throw bad('Reminder requires a due date and/or target mileage');return o;
 }
-r.post('/vehicles/:vehicleId/reminders',asyncRoute(async(req,res)=>{await db.ownVehicle(req.params.vehicleId,req.user.sub);const item={id:randomUUID(),ownerId:req.user.sub,vehicleId:req.params.vehicleId,status:'Open',dueDate:'9999-12-31',...parseReminder(req.body),createdAt:now()};await db.put('Reminders',item,true);res.status(201).json(item);}));
+r.post('/vehicles/:vehicleId/reminders',asyncRoute(async(req,res)=>{const vehicle=await db.ownVehicle(req.params.vehicleId,req.user.sub),key=requestKey(req),email=await verifiedEmail(r.testEmailDependencies.idp,req.user),id=reminderId(req.user.sub,vehicle.id,key);let item=await db.get('Reminders',id),created=false;if(item){if(item.ownerId!==req.user.sub||item.vehicleId!==vehicle.id||item.creationRequestKey!==key)throw bad('Invalid reminder retry');}else{item={id,ownerId:req.user.sub,vehicleId:vehicle.id,status:'Open',dueDate:'9999-12-31',...parseReminder(req.body),createdAt:now(),creationRequestKey:key,confirmationEmailStatus:'PENDING_QUEUE'};await db.put('Reminders',item,true);created=true;}const confirmation=await queueConfirmation({store:db,sqs:r.testEmailDependencies.sqs,queueUrl:process.env.NOTIFICATION_QUEUE_URL,reminder:item,email,key});const output={...item,confirmationEmailStatus:confirmation.queued?'QUEUED':'PENDING_QUEUE',confirmationQueued:confirmation.queued,retryable:!confirmation.queued};res.status(confirmation.queued&&created?201:202).json(output);}));
 r.get('/reminders',asyncRoute(async(req,res)=>{
   const all=await db.query('Reminders','owner-index','ownerId',req.user.sub);const vehicles=await db.query('Vehicles','owner-index','ownerId',req.user.sub);const current=new Map(vehicles.map(c=>[c.id,c]));
   const status=String(req.query.status||'all');if(!['all','due','upcoming','completed'].includes(status))throw bad('Invalid status filter');
@@ -31,6 +36,8 @@ r.patch('/reminders/:id',asyncRoute(async(req,res)=>{
   const updated=await db.patch('Reminders',item.id,patch);if(patch.status==='Completed')void publishEvent('ReminderCompleted',{reminderId:item.id,vehicleId:item.vehicleId,occurredAt:patch.completedAt});res.json(updated);
 }));
 r.delete('/reminders/:id',asyncRoute(async(req,res)=>{await db.owned('Reminders',req.params.id,req.user.sub);await db.del('Reminders',req.params.id);res.status(204).end();}));
+r.post('/reminders/:id/test-email',asyncRoute(async(req,res)=>{const result=await requestManualTest({reminderId:req.params.id,user:req.user,queueUrl:process.env.NOTIFICATION_QUEUE_URL,...r.testEmailDependencies});res.status(202).json(result);}));
+r.get('/reminders/:id/test-email-status',asyncRoute(async(req,res)=>{const reminder=await db.owned('Reminders',req.params.id,req.user.sub);res.json(publicStatus(reminder));}));
 async function ownerData(sub){const [cars,fuel,expenses,maintenance,reminders]=await Promise.all(['Vehicles','Fuel','Expenses','Maintenance','Reminders'].map(t=>db.query(t,'owner-index','ownerId',sub)));return {cars,fuel,expenses,maintenance,reminders};}
 r.get('/analytics/summary',asyncRoute(async(req,res)=>{
   const data=await ownerData(req.user.sub);const total=costSummary(data);const mileageById=new Map(data.cars.map(c=>[c.id,c.mileageKm]));

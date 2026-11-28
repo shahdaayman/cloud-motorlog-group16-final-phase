@@ -1,9 +1,3 @@
-/**
- * Motorlog / Group 16: one-time LOCAL Floci SQS -> Lambda worker -> SES integration test.
- * Save this file in the project root next to package.json and run:
- *   node motorlog-process-one-notification.js
- * This is not the production scheduler or SQS event-source mapping.
- */
 require('dotenv').config();
 const { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } = require('@aws-sdk/client-sqs');
 const { awsOptions } = require('./backend/shared/config');

@@ -1,0 +1,54 @@
+{
+    "Version":  "2012-10-17",
+    "Statement":  [
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "logs:CreateLogGroup",
+                                         "logs:CreateLogStream",
+                                         "logs:PutLogEvents"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  [
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLUsers",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLReminders",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLReminders/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLVehicles"
+                                       ],
+                          "Action":  [
+                                         "dynamodb:GetItem",
+                                         "dynamodb:PutItem",
+                                         "dynamodb:UpdateItem",
+                                         "dynamodb:DeleteItem",
+                                         "dynamodb:Query"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  [
+                                           "arn:aws:sqs:us-east-1:000000000000:cml-reminder-notifications",
+                                           "arn:aws:sqs:us-east-1:000000000000:cml-reminder-notifications-dlq"
+                                       ],
+                          "Action":  [
+                                         "sqs:SendMessage",
+                                         "sqs:ReceiveMessage",
+                                         "sqs:DeleteMessage",
+                                         "sqs:ChangeMessageVisibility",
+                                         "sqs:GetQueueAttributes"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  "ses:SendEmail"
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  "cognito-idp:GetUser"
+                      }
+                  ]
+}

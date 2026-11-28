@@ -1,0 +1,142 @@
+{
+    "CallerReference":  "motorlog-frontend-1795804198742",
+    "Comment":  "Motorlog Frontend",
+    "Enabled":  true,
+    "DefaultRootObject":  "index.html",
+    "PriceClass":  "PriceClass_100",
+    "HttpVersion":  "http2",
+    "IsIPV6Enabled":  false,
+    "Origins":  {
+                    "Quantity":  1,
+                    "Items":  [
+                                  {
+                                      "ConnectionTimeout":  10,
+                                      "Id":  "motorlog-frontend-s3",
+                                      "ConnectionAttempts":  3,
+                                      "OriginShield":  {
+                                                           "Enabled":  false
+                                                       },
+                                      "OriginPath":  "",
+                                      "DomainName":  "motorlog-frontend.s3.us-east-1.amazonaws.com",
+                                      "S3OriginConfig":  {
+                                                             "OriginAccessIdentity":  ""
+                                                         },
+                                      "OriginAccessControlId":  "a26894c9-bb5b-4241-9882-347909f11e81",
+                                      "CustomHeaders":  {
+                                                            "Quantity":  0
+                                                        }
+                                  }
+                              ]
+                },
+    "DefaultCacheBehavior":  {
+                                 "DefaultTTL":  3600,
+                                 "FieldLevelEncryptionId":  "",
+                                 "MaxTTL":  86400,
+                                 "Compress":  true,
+                                 "TargetOriginId":  "motorlog-frontend-s3",
+                                 "TrustedKeyGroups":  {
+                                                          "Quantity":  0,
+                                                          "Enabled":  false
+                                                      },
+                                 "SmoothStreaming":  false,
+                                 "ForwardedValues":  {
+                                                         "Cookies":  {
+                                                                         "Forward":  "none"
+                                                                     },
+                                                         "QueryString":  false,
+                                                         "Headers":  {
+                                                                         "Quantity":  0
+                                                                     },
+                                                         "QueryStringCacheKeys":  {
+                                                                                      "Quantity":  0
+                                                                                  }
+                                                     },
+                                 "MinTTL":  0,
+                                 "TrustedSigners":  {
+                                                        "Quantity":  0,
+                                                        "Enabled":  false
+                                                    },
+                                 "AllowedMethods":  {
+                                                        "Quantity":  2,
+                                                        "Items":  [
+                                                                      "HEAD",
+                                                                      "GET"
+                                                                  ],
+                                                        "CachedMethods":  {
+                                                                              "Quantity":  2,
+                                                                              "Items":  [
+                                                                                            "HEAD",
+                                                                                            "GET"
+                                                                                        ]
+                                                                          }
+                                                    },
+                                 "ViewerProtocolPolicy":  "allow-all"
+                             },
+    "CacheBehaviors":  {
+                           "Quantity":  1,
+                           "Items":  [
+                                         {
+                                             "Compress":  true,
+                                             "MinTTL":  0,
+                                             "TrustedSigners":  {
+                                                                    "Quantity":  0,
+                                                                    "Enabled":  false
+                                                                },
+                                             "MaxTTL":  0,
+                                             "ViewerProtocolPolicy":  "allow-all",
+                                             "ForwardedValues":  {
+                                                                     "Cookies":  {
+                                                                                     "Forward":  "none"
+                                                                                 },
+                                                                     "QueryString":  false,
+                                                                     "Headers":  {
+                                                                                     "Quantity":  0
+                                                                                 },
+                                                                     "QueryStringCacheKeys":  {
+                                                                                                  "Quantity":  0
+                                                                                              }
+                                                                 },
+                                             "TargetOriginId":  "motorlog-frontend-s3",
+                                             "AllowedMethods":  {
+                                                                    "Quantity":  2,
+                                                                    "Items":  [
+                                                                                  "HEAD",
+                                                                                  "GET"
+                                                                              ],
+                                                                    "CachedMethods":  {
+                                                                                          "Quantity":  2,
+                                                                                          "Items":  [
+                                                                                                        "HEAD",
+                                                                                                        "GET"
+                                                                                                    ]
+                                                                                      }
+                                                                },
+                                             "PathPattern":  "*.html",
+                                             "SmoothStreaming":  false,
+                                             "TrustedKeyGroups":  {
+                                                                      "Quantity":  0,
+                                                                      "Enabled":  false
+                                                                  },
+                                             "FieldLevelEncryptionId":  "",
+                                             "DefaultTTL":  0
+                                         }
+                                     ]
+                       },
+    "CustomErrorResponses":  {
+                                 "Quantity":  0
+                             },
+    "Aliases":  {
+                    "Quantity":  0
+                },
+    "ViewerCertificate":  {
+                              "MinimumProtocolVersion":  "TLSv1",
+                              "CloudFrontDefaultCertificate":  true,
+                              "CertificateSource":  "cloudfront"
+                          },
+    "Restrictions":  {
+                         "GeoRestriction":  {
+                                                "Quantity":  0,
+                                                "RestrictionType":  "none"
+                                            }
+                     }
+}

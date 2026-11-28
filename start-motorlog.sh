@@ -92,19 +92,26 @@ ensure_ecs_backend(){
 
 discover_deployment(){
   API_ID="$(aws_local apigateway get-rest-apis --limit 500 --query "items[?name=='motorlog-api'].id | [0]" --output text 2>/dev/null || true)"
-  if [[ -n "$API_ID" && "$API_ID" != None ]]; then API_STAGE="$(aws_local apigateway get-stages --rest-api-id "$API_ID" --query 'item[0].stageName' --output text 2>/dev/null || true)"; [[ -n "$API_STAGE" && "$API_STAGE" != None ]] && API_GATEWAY_URL="$FLOCI_URL/restapis/$API_ID/$API_STAGE/_user_request_"; fi
+  if [[ -n "$API_ID" && "$API_ID" != None ]]; then API_STAGE="$(aws_local apigateway get-stages --rest-api-id "$API_ID" --query 'item[0].stageName' --output text 2>/dev/null || true)"; [[ -n "$API_STAGE" && "$API_STAGE" != None ]] && API_GATEWAY_URL="http://$API_ID.execute-api.localhost.localstack.cloud:4566/$API_STAGE"; fi
   CF_ID="$(aws_local cloudfront list-distributions --query "DistributionList.Items[?Comment=='Motorlog Frontend'].Id | [0]" --output text 2>/dev/null || true)"
   if [[ -n "$CF_ID" && "$CF_ID" != None ]]; then CF_STATE="$(aws_local cloudfront get-distribution --id "$CF_ID" --query 'Distribution.[DistributionConfig.Enabled,Status]' --output text 2>/dev/null || true)"; DEPLOYED_FRONTEND_URL="http://$(printf '%s' "$CF_ID" | tr '[:upper:]' '[:lower:]').cloudfront.localhost.localstack.cloud:4566"; fi
 }
 
 check_cloud(){
   section 'CLOUD INFRASTRUCTURE'; http_ok "$FLOCI_URL/_floci/health" 5 && required_ok 'Floci Emulator' || { required_fail 'Floci health endpoint'; return 1; }
-  local tables missing=() table pools ses ecs
+  local tables missing=() table pools ses ecs reminder_state reminder_expression reminder_queue reminder_mapping reminder_lambda_queue reminder_sender
   tables="$(aws_local dynamodb list-tables --query 'TableNames' --output text 2>/dev/null || true)"; tables="${tables//$'\t'/ }"
   for table in CMLUsers CMLVehicles CMLMaintenance CMLFuel CMLExpenses CMLReminders CMLAudit CMLAuthRateLimits; do [[ " $tables " == *" $table "* ]] || missing+=("$table"); done
   (( ${#missing[@]} == 0 )) && required_ok 'DynamoDB — 8/8 tables' || required_fail "DynamoDB — $((8-${#missing[@]}))/8 tables; run --setup"
   pools="$(aws_local cognito-idp list-user-pools --max-results 60 --query "length(UserPools[?Name=='CML-Group16-Users'])" --output text 2>/dev/null || true)"; [[ "$pools" =~ ^[1-9] ]] && required_ok 'Cognito Authentication' || required_fail 'Cognito pool missing; run --setup'
   ses="$(aws_local sesv2 get-account --query 'SendingEnabled' --output text 2>/dev/null || true)"; [[ -n "$ses" && "$ses" != None ]] && required_ok 'SES Email Service' || required_fail 'SES account unavailable'
+  reminder_state="$(aws_local scheduler get-schedule --group-name motorlog --name motorlog-daily-reminder-check --query State --output text 2>/dev/null || true)"; reminder_expression="$(aws_local scheduler get-schedule --group-name motorlog --name motorlog-daily-reminder-check --query ScheduleExpression --output text 2>/dev/null || true)"
+  [[ "$reminder_state" == ENABLED ]] && required_ok 'Reminder automation: ENABLED' || required_fail "Reminder automation: ${reminder_state:-NOT CONFIGURED}; run npm run reminders:deploy or deliberately enable it"
+  [[ "$reminder_expression" == 'cron(0 9 * * ? *)' ]] && required_ok 'EventBridge Scheduler configured' || required_fail 'EventBridge Scheduler configuration missing or unexpected'
+  reminder_queue="$(aws_local sqs get-queue-url --queue-name cml-reminder-notifications --query QueueUrl --output text 2>/dev/null || true)"; reminder_mapping="$(aws_local lambda list-event-source-mappings --function-name cml-reminders --query "EventSourceMappings[?State=='Enabled'] | length(@)" --output text 2>/dev/null || true)"
+  [[ -n "$reminder_queue" && "$reminder_queue" != None && "$reminder_mapping" =~ ^[1-9] ]] && required_ok 'SQS notification queue connected' || required_fail 'SQS reminder notification connection missing'
+  reminder_lambda_queue="$(aws_local lambda get-function-configuration --function-name cml-reminders --query 'Environment.Variables.NOTIFICATION_QUEUE_URL' --output text 2>/dev/null || true)"; [[ "$reminder_lambda_queue" == http://floci:4566/* ]] && required_ok 'Reminder Lambda configured' || required_fail 'Reminder Lambda notification queue URL missing; run npm run reminders:deploy'
+  reminder_sender="$(aws_local lambda get-function-configuration --function-name cml-reminders --query 'Environment.Variables.SES_FROM_EMAIL' --output text 2>/dev/null || true)"; [[ -n "$reminder_sender" && "$reminder_sender" != None ]] && aws_local sesv2 get-email-identity --email-identity "$reminder_sender" >/dev/null 2>&1 && required_ok 'SES email delivery configured' || required_fail 'SES reminder email identity missing'
   discover_deployment
   [[ -n "$API_GATEWAY_URL" ]] && http_ok "$API_GATEWAY_URL/api/health" 8 && required_ok "API Gateway — stage $API_STAGE" || required_fail 'API Gateway or deployed health route missing; run --setup'
   ecs="$(aws_local ecs describe-services --cluster motorlog-cluster --services motorlog-backend-service --query 'services[0].[status,runningCount,desiredCount]' --output text 2>/dev/null || true)"

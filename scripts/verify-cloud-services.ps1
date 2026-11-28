@@ -2,8 +2,18 @@
 $results=@();function Check([string]$name,[scriptblock]$test){try{& $test|Out-Null;$script:results+=@([pscustomobject]@{Service=$name;Result='PASS';Detail='API check succeeded'})}catch{$script:results+=@([pscustomobject]@{Service=$name;Result=if($_.Exception.Message -match 'not supported|UnknownOperation|not implemented'){'NOT SUPPORTED'}else{'FAIL'};Detail=$_.Exception.Message})}}
 Check S3 {Invoke-Aws s3api list-buckets}
 Check ELBv2 {Invoke-Aws elbv2 describe-load-balancers --names motorlog-alb}
-Check ECS {Invoke-Aws ecs describe-services --cluster motorlog-cluster --services motorlog-backend-service}
-Check AutoScaling {Invoke-Aws application-autoscaling describe-scalable-targets --service-namespace ecs}
+Check ECS {
+  $services=@((Invoke-Aws ecs describe-services --cluster motorlog-cluster --services motorlog-backend-service|ConvertFrom-Json).services|Where-Object{$_.serviceName -eq 'motorlog-backend-service'})
+  if($services.Count -ne 1 -or $services[0].status -ne 'ACTIVE' -or $services[0].desiredCount -ne 1){throw 'Motorlog ECS service is not configured as ACTIVE with desired count one'}
+  Write-Host "PASS ECS configuration; running tasks $($services[0].runningCount)/$($services[0].desiredCount)."
+}
+Check AutoScaling {
+  $resourceId='service/motorlog-cluster/motorlog-backend-service'
+  $targets=@((Invoke-Aws application-autoscaling describe-scalable-targets --service-namespace ecs --resource-ids $resourceId|ConvertFrom-Json).ScalableTargets)
+  if($targets.Count -ne 1 -or $targets[0].MinCapacity -ne 1 -or $targets[0].MaxCapacity -ne 4){throw 'ECS scalable target must use min one and max four'}
+  $policies=@((Invoke-Aws application-autoscaling describe-scaling-policies --service-namespace ecs --resource-id $resourceId|ConvertFrom-Json).ScalingPolicies)
+  if($policies.Count -ne 1 -or $policies[0].TargetTrackingScalingPolicyConfiguration.TargetValue -ne 50){throw 'ECS CPU target tracking must be exactly fifty percent'}
+}
 Check DynamoDB {Invoke-Aws dynamodb list-tables}
 Check SQS {Invoke-Aws sqs list-queues}
 Check SNS {Invoke-Aws sns list-topics}
@@ -40,7 +50,10 @@ Check EventBridgeAuditPipeline {
     Write-Host "PASS EventBridge audit delivery: $eventId reached /motorlog/events/audit."
   }finally{if(Test-Path -LiteralPath $eventPath){Remove-Item -LiteralPath $eventPath -Force}}
 }
-Check SecretsManager {Invoke-Aws secretsmanager describe-secret --secret-id motorlog-app/config}
+Check SecretsManager {
+  Invoke-Aws secretsmanager describe-secret --secret-id motorlog-app/config|Out-Null
+  Invoke-Aws secretsmanager describe-secret --secret-id motorlog-auth/rate-limit-key|Out-Null
+}
 Check IAM {Invoke-Aws iam get-role --role-name motorlog-ecs-task-role}
 Check CloudWatchLogs {Invoke-Aws logs describe-log-groups --log-group-name-prefix /motorlog}
 Check BackendHealth {if((Invoke-WebRequest -UseBasicParsing http://localhost:3101/api/health -TimeoutSec 3).StatusCode -ne 200){throw 'Health endpoint failed'}}

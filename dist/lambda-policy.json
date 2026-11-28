@@ -1,0 +1,74 @@
+{
+    "Version":  "2012-10-17",
+    "Statement":  [
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "logs:CreateLogGroup",
+                                         "logs:CreateLogStream",
+                                         "logs:PutLogEvents"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  [
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLUsers*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLVehicles*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLMaintenance*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLFuel*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLExpenses*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLReminders*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLAudit*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLAuthRateLimits*"
+                                       ],
+                          "Action":  [
+                                         "dynamodb:GetItem",
+                                         "dynamodb:PutItem",
+                                         "dynamodb:UpdateItem",
+                                         "dynamodb:DeleteItem",
+                                         "dynamodb:BatchWriteItem",
+                                         "dynamodb:Query",
+                                         "dynamodb:Scan",
+                                         "dynamodb:DescribeTable"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "cognito-idp:*"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "sqs:SendMessage",
+                                         "sqs:GetQueueAttributes"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "ses:SendEmail",
+                                         "ses:GetAccount"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "s3:ListBucket",
+                                         "apigateway:GET",
+                                         "lambda:GetFunction",
+                                         "iam:GetRole",
+                                         "cloudwatch:DescribeAlarms",
+                                         "scheduler:GetSchedule",
+                                         "cloudfront:ListDistributions",
+                                         "elasticloadbalancing:DescribeLoadBalancers"
+                                     ]
+                      }
+                  ]
+}

@@ -1,0 +1,10 @@
+{
+    "id":  "EA1POBQ5GCK8C5",
+    "arn":  "arn:aws:cloudfront::000000000000:distribution/EA1POBQ5GCK8C5",
+    "domainName":  "ea1pobq5gck8c5.cloudfront.net",
+    "url":  "http://ea1pobq5gck8c5.cloudfront.localhost.localstack.cloud:4566",
+    "originBucket":  "motorlog-frontend",
+    "originDomain":  "motorlog-frontend.s3.us-east-1.amazonaws.com",
+    "originAccessControlId":  "a26894c9-bb5b-4241-9882-347909f11e81",
+    "comment":  "Motorlog Frontend"
+}

@@ -26,9 +26,15 @@ Write-JsonFile $policyPath @{Version='2012-10-17';Statement=@(
   @{Effect='Allow';Action=@('s3:ListBucket','apigateway:GET','lambda:GetFunction','iam:GetRole','cloudwatch:DescribeAlarms','scheduler:GetSchedule','cloudfront:ListDistributions','elasticloadbalancing:DescribeLoadBalancers');Resource='*'}
 )}
 
-$role = $null
-try { $role = Invoke-Aws iam get-role --role-name $roleName | ConvertFrom-Json } catch {
+$roleCheck = Invoke-AwsExistenceCheck -Arguments @('iam','get-role','--role-name',$roleName) -NotFoundErrorCodes @('NoSuchEntity')
+if ($roleCheck.Exists) {
+  Write-Host "[EXISTS] IAM role $roleName"
+  $role = $roleCheck.Output | ConvertFrom-Json
+} else {
+  Write-Host "[INFO] IAM role $roleName not found; creating..."
+  Write-Host "[CREATE] IAM role $roleName"
   $role = Invoke-Aws iam create-role --role-name $roleName --assume-role-policy-document "file://$trustPath" | ConvertFrom-Json
+  Write-Host "[OK] IAM role $roleName created"
 }
 Invoke-Aws iam put-role-policy --role-name $roleName --policy-name motorlog-runtime --policy-document "file://$policyPath" | Out-Null
 $roleArn = $role.Role.Arn
@@ -44,8 +50,16 @@ if(Test-Path -LiteralPath $cloudFrontInfoPath){
   if($cloudFrontOrigin -and @($configuredOrigins.Split(',')|ForEach-Object{$_.Trim()}) -notcontains $cloudFrontOrigin){$configuredOrigins="$configuredOrigins,$cloudFrontOrigin"}
 }
 $rateLimitSecret=$envFile.SERVICE_INTERNAL_SECRET
-if(-not $rateLimitSecret){try{$rateLimitSecret=(Invoke-Aws lambda get-function-configuration --function-name cml-vehicles|ConvertFrom-Json).Environment.Variables.RATE_LIMIT_KEY_SECRET}catch{}}
+if(-not $rateLimitSecret){
+  $secretSourceCheck=Invoke-AwsExistenceCheck -Arguments @('lambda','get-function-configuration','--function-name','cml-vehicles') -NotFoundErrorCodes @('ResourceNotFoundException')
+  if($secretSourceCheck.Exists){$rateLimitSecret=($secretSourceCheck.Output|ConvertFrom-Json).Environment.Variables.RATE_LIMIT_KEY_SECRET}
+}
 if(-not $rateLimitSecret){$bytes=New-Object byte[] 32;[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes);$rateLimitSecret=[Convert]::ToBase64String($bytes)}
+$notificationQueueUrl=$envFile.NOTIFICATION_QUEUE_URL
+if(-not $notificationQueueUrl){
+  $reminderConfigurationCheck=Invoke-AwsExistenceCheck -Arguments @('lambda','get-function-configuration','--function-name','cml-reminders') -NotFoundErrorCodes @('ResourceNotFoundException')
+  if($reminderConfigurationCheck.Exists){$notificationQueueUrl=($reminderConfigurationCheck.Output|ConvertFrom-Json).Environment.Variables.NOTIFICATION_QUEUE_URL}
+}
 $commonEnvironment = @{
   NODE_ENV='production';AWS_REGION=$Region;AWS_ENDPOINT_URL=$internalEndpoint;AWS_ACCESS_KEY_ID='test';AWS_SECRET_ACCESS_KEY='test';TABLE_PREFIX=$tablePrefix
   COGNITO_USER_POOL_ID=$envFile.COGNITO_USER_POOL_ID;COGNITO_APP_CLIENT_ID=$envFile.COGNITO_APP_CLIENT_ID;COGNITO_ISSUER=$envFile.COGNITO_ISSUER
@@ -53,27 +67,52 @@ $commonEnvironment = @{
   CORS_ORIGINS=$configuredOrigins
   RATE_LIMIT_KEY_SECRET=$rateLimitSecret
   SES_FROM_EMAIL=if($envFile.SES_FROM_EMAIL){$envFile.SES_FROM_EMAIL}else{'no-reply@car-maintenance.local'}
-  NOTIFICATION_QUEUE_URL=if($envFile.NOTIFICATION_QUEUE_URL){$envFile.NOTIFICATION_QUEUE_URL -replace '^http://localhost:4566',$internalEndpoint}else{''}
+  NOTIFICATION_QUEUE_URL=if($notificationQueueUrl){$notificationQueueUrl -replace '^http://localhost:4566',$internalEndpoint}else{''}
 }
 
 $functions = [ordered]@{vehicles='cml-vehicles';fuel='cml-fuel';reminders='cml-reminders'}
+function Test-EnvironmentMatches($actual,$expected){
+  if(-not $actual -or @($actual.psobject.Properties).Count -ne $expected.Count){return $false}
+  foreach($key in $expected.Keys){if([string]$actual.$key -cne [string]$expected[$key]){return $false}}
+  return $true
+}
 foreach ($service in $functions.Keys) {
   if($Services -notcontains $service){continue}
   $name = $functions[$service]
   $zip = Join-Path $dist "$service.zip"
   $environmentPath = Join-Path $dist "$service-environment.json"
   Write-JsonFile $environmentPath @{Variables=$commonEnvironment}
-  $exists = $true
-  try { Invoke-Aws lambda get-function --function-name $name | Out-Null } catch { $exists = $false }
-  $serviceRoleName="motorlog-$service-runtime";$serviceRoleArn=$roleArn
-  try{$serviceRoleArn=(Invoke-Aws iam get-role --role-name $serviceRoleName|ConvertFrom-Json).Role.Arn}catch{Write-Warning "$serviceRoleName is not deployed; using the legacy shared role. Run npm run iam:deploy."}
+  $functionCheck=Invoke-AwsExistenceCheck -Arguments @('lambda','get-function','--function-name',$name) -NotFoundErrorCodes @('ResourceNotFoundException')
+  $exists=$functionCheck.Exists
+  if(-not $exists){Write-Host "[INFO] Lambda $name not found; creating..."}
+  $serviceRoleName="motorlog-$service-runtime";$serviceRoleArn=$roleArn;$effectiveRoleName=$roleName
+  $serviceRoleCheck=Invoke-AwsExistenceCheck -Arguments @('iam','get-role','--role-name',$serviceRoleName) -NotFoundErrorCodes @('NoSuchEntity')
+  if($serviceRoleCheck.Exists){$serviceRoleArn=($serviceRoleCheck.Output|ConvertFrom-Json).Role.Arn;$effectiveRoleName=$serviceRoleName}else{Write-Host "[INFO] IAM role $serviceRoleName not found; using $roleName until npm run iam:deploy is run."}
   if ($exists) {
-    Invoke-Aws lambda update-function-code --function-name $name --zip-file "fileb://$zip" | Out-Null
-    Invoke-Aws lambda update-function-configuration --function-name $name --runtime nodejs22.x --handler index.handler --role $serviceRoleArn --timeout 30 --memory-size 512 --environment "file://$environmentPath" | Out-Null
+    $current=($functionCheck.Output|ConvertFrom-Json).Configuration
+    $zipHash=[Convert]::ToBase64String(([Security.Cryptography.SHA256]::Create()).ComputeHash([IO.File]::ReadAllBytes($zip)))
+    $codeChanged=$current.CodeSha256 -ne $zipHash
+    $configurationChanged=$current.Runtime -ne 'nodejs22.x' -or $current.Handler -ne 'index.handler' -or $current.Role -ne $serviceRoleArn -or $current.Timeout -ne 30 -or $current.MemorySize -ne 512 -or -not (Test-EnvironmentMatches $current.Environment.Variables $commonEnvironment)
+    if($codeChanged -or $configurationChanged){
+      Write-Host "[UPDATE] Lambda $name"
+      if($codeChanged){Invoke-Aws lambda update-function-code --function-name $name --zip-file "fileb://$zip" | Out-Null;Wait-MotorlogLambdaActive -FunctionName $name | Out-Null}
+      if($configurationChanged){Invoke-Aws lambda update-function-configuration --function-name $name --runtime nodejs22.x --handler index.handler --role $serviceRoleArn --timeout 30 --memory-size 512 --environment "file://$environmentPath" | Out-Null}
+    }else{Write-Host "[EXISTS] Lambda $name is already current"}
   } else {
+    Write-Host "[CREATE] Lambda $name"
     Invoke-Aws lambda create-function --function-name $name --runtime nodejs22.x --handler index.handler --role $serviceRoleArn --zip-file "fileb://$zip" --timeout 30 --memory-size 512 --environment "file://$environmentPath" | Out-Null
   }
-  Write-Host "Deployed $name"
+  $configuration=Wait-MotorlogLambdaActive -FunctionName $name
+  if($configuration.Role -ne $serviceRoleArn){throw "Lambda $name uses role $($configuration.Role), expected $serviceRoleArn."}
+  Write-Host "[OK] Lambda $name is Active and uses $effectiveRoleName"
+}
+
+foreach($name in $functions.Values){
+  $verification=Invoke-AwsExistenceCheck -Arguments @('lambda','get-function-configuration','--function-name',$name) -NotFoundErrorCodes @('ResourceNotFoundException')
+  if(-not $verification.Exists){throw "Post-deployment verification failed: Lambda $name does not exist."}
+  $configuration=$verification.Output|ConvertFrom-Json
+  if($configuration.State -ne 'Active'){throw "Post-deployment verification failed: Lambda $name state is $($configuration.State), expected Active."}
+  if(-not $configuration.Role){throw "Post-deployment verification failed: Lambda $name has no execution role."}
 }
 
 $infoPath=Get-DeploymentInfoPath

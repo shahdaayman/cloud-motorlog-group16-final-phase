@@ -1,0 +1,7 @@
+{
+    "Variables":  {
+                      "AWS_ENDPOINT_URL":  "http://floci:4566",
+                      "AUDIT_LOG_GROUP":  "/motorlog/events/audit",
+                      "AUDIT_LOG_STREAM":  "motorlog-eventbridge-audit"
+                  }
+}

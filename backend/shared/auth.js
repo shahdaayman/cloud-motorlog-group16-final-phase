@@ -24,7 +24,7 @@ async function authenticate(req,res,next){
       profile=await db.put('Users',{id:payload.sub,email:userEmail,status:'Active',createdAt:new Date().toISOString()},true).catch(async e=>e.status===409?db.get('Users',payload.sub):Promise.reject(e));}
     const deletionRetry=req.method==='DELETE'&&req.originalUrl?.split('?')[0].endsWith('/api/auth/account');
     if(profile.status!=='Active'&&!(profile.status==='Deleting'&&deletionRetry))throw forbidden(profile.status==='Deleting'?'Account deletion is in progress':'Account disabled');
-    req.user={sub:payload.sub,email:profile.email,groups:payload['cognito:groups']||[],isAdmin:(payload['cognito:groups']||[]).includes('Admin'),accessToken:match[1]};
+    req.user={sub:payload.sub,email:profile.email,groups:payload['cognito:groups']||[],isAdmin:(payload['cognito:groups']||[]).includes('Admin'),tokenExpiresAt:Number(payload.exp||0),accessToken:match[1]};
     next();
   }catch(e){next(e);}
 }

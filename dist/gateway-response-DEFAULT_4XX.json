@@ -1,0 +1,9 @@
+{
+    "restApiId":  "07be393592",
+    "responseParameters":  {
+                               "gatewayresponse.header.Access-Control-Allow-Origin":  "\u0027http://ea1pobq5gck8c5.cloudfront.localhost.localstack.cloud:4566\u0027",
+                               "gatewayresponse.header.Access-Control-Allow-Headers":  "\u0027Authorization,Content-Type,Idempotency-Key\u0027",
+                               "gatewayresponse.header.Access-Control-Allow-Methods":  "\u0027GET,POST,PATCH,DELETE,OPTIONS\u0027"
+                           },
+    "responseType":  "DEFAULT_4XX"
+}

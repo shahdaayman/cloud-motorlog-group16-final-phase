@@ -6,9 +6,9 @@ const {SUBJECT,buildReminderEmail}=require('../backend/services/reminders/remind
 
 test('professional reminder email provides HTML and plain-text alternatives with real data',()=>{
   const message=buildReminderEmail({reminder:{title:'Brake inspection',dueDate:'2026-11-12',dueMileageKm:85000,notes:'Check front pads and rotors.'},vehicle:{nickname:'Family Car'}});
-  assert.equal(message.subject,'Motorlog — Maintenance Reminder');assert.equal(SUBJECT,message.subject);
+  assert.equal(message.subject,'Motorlog — Maintenance Due Tomorrow');assert.equal(SUBJECT,message.subject);
   for(const value of ['Brake inspection','Family Car','12 November 2026','85,000 km','Check front pads and rotors.']){assert.match(message.html,new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));assert.match(message.text,new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));}
-  assert.match(message.html,/role="presentation"/);assert.match(message.html,/style="/);assert.match(message.html,/background:#101b2e/);assert.match(message.html,/Maintenance overdue/);
+  assert.match(message.html,/role="presentation"/);assert.match(message.html,/style="/);assert.match(message.html,/background:#101b2e/);assert.match(message.html,/DUE TOMORROW/);
 });
 test('optional reminder values are omitted instead of invented',()=>{
   const message=buildReminderEmail({reminder:{title:'Oil change',dueDate:'9999-12-31',dueMileageKm:null,notes:''},vehicle:{nickname:'Roadster'}});

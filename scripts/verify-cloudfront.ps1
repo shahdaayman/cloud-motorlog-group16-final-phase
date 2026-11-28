@@ -14,14 +14,17 @@ function Assert-Http([string]$path,[string]$type){
 Assert-Http '/' 'text/html';Assert-Http '/css/styles.css' 'text/css';Assert-Http '/js/app.js' 'application/javascript';Assert-Http '/admin/' 'text/html';Assert-Http '/css/admin.css' 'text/css';Assert-Http '/js/admin.js' 'application/javascript'
 $api=(Get-MotorlogApiDeployment).url;$origin=$info.url.TrimEnd('/')
 foreach($path in '/api/vehicles','/api/admin/overview'){
-  $preflight=Invoke-WebRequest -UseBasicParsing -Method OPTIONS -Uri "$api$path" -Headers @{Origin=$origin;'Access-Control-Request-Method'='GET';'Access-Control-Request-Headers'='authorization,content-type'}
-  if($preflight.StatusCode -notin 200,204 -or $preflight.Headers['Access-Control-Allow-Origin'] -ne $origin){throw "CORS preflight failed for $path"}
+  $preflight=Invoke-WebRequest -UseBasicParsing -Method OPTIONS -Uri "$api$path" -Headers @{Origin=$origin;'Access-Control-Request-Method'='GET';'Access-Control-Request-Headers'='authorization,content-type,idempotency-key'}
+  if($preflight.StatusCode -notin 200,204 -or $preflight.Headers['Access-Control-Allow-Origin'] -ne $origin -or $preflight.Headers['Access-Control-Allow-Headers'] -notmatch '(?i)idempotency-key'){throw "CORS preflight failed for $path"}
   try{$null=Invoke-WebRequest -UseBasicParsing -Uri "$api$path" -Headers @{Origin=$origin};throw "Unauthenticated $path unexpectedly succeeded"}catch{
     $errorResponse=$_.Exception.Response
     if(-not $errorResponse -or [int]$errorResponse.StatusCode -ne 401 -or $errorResponse.Headers['Access-Control-Allow-Origin'] -ne $origin){throw "Protected unauthenticated check failed for $path"}
   }
   Write-Host "PASS OPTIONS and unauthenticated 401 CORS for $path"
 }
+$reminderPreflight=Invoke-WebRequest -UseBasicParsing -Method OPTIONS -Uri "$api/api/vehicles/cors-probe/reminders" -Headers @{Origin=$origin;'Access-Control-Request-Method'='POST';'Access-Control-Request-Headers'='authorization,content-type,idempotency-key'}
+if($reminderPreflight.StatusCode -notin 200,204 -or $reminderPreflight.Headers['Access-Control-Allow-Origin'] -ne $origin -or $reminderPreflight.Headers['Access-Control-Allow-Methods'] -notmatch 'POST' -or $reminderPreflight.Headers['Access-Control-Allow-Headers'] -notmatch '(?i)idempotency-key'){throw 'Reminder creation CORS preflight failed.'}
+Write-Host 'PASS reminder creation OPTIONS allows Authorization, Content-Type, and Idempotency-Key'
 $config=Invoke-WebRequest -UseBasicParsing -Uri "$($info.url)/js/config.js"
 if($config.Content -notmatch [regex]::Escape($api)){throw 'CloudFront frontend API configuration is incorrect.'}
 Write-Host "PASS CloudFront distribution $($info.id) is enabled, serves the existing S3 origin, and has API CORS."

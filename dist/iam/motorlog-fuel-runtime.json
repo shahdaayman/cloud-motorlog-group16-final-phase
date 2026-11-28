@@ -1,0 +1,51 @@
+{
+    "Version":  "2012-10-17",
+    "Statement":  [
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "arn:aws:logs:us-east-1:000000000000:log-group:/aws/lambda/cml-*:*",
+                          "Action":  [
+                                         "logs:CreateLogGroup",
+                                         "logs:CreateLogStream",
+                                         "logs:PutLogEvents"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Condition":  {
+                                            "StringEquals":  {
+                                                                 "cloudwatch:namespace":  "Motorlog/Application"
+                                                             }
+                                        },
+                          "Action":  "cloudwatch:PutMetricData"
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  [
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLUsers",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLUsers/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLVehicles",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLVehicles/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLFuel",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLFuel/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLExpenses",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLExpenses/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLMaintenance",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLMaintenance/index/*"
+                                       ],
+                          "Action":  [
+                                         "dynamodb:GetItem",
+                                         "dynamodb:PutItem",
+                                         "dynamodb:UpdateItem",
+                                         "dynamodb:DeleteItem",
+                                         "dynamodb:Query"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  "cognito-idp:GetUser"
+                      }
+                  ]
+}

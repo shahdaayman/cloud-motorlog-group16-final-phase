@@ -1,0 +1,66 @@
+{
+    "family":  "motorlog-backend-task",
+    "networkMode":  "awsvpc",
+    "requiresCompatibilities":  [
+                                    "FARGATE"
+                                ],
+    "cpu":  "256",
+    "memory":  "512",
+    "executionRoleArn":  "arn:aws:iam::000000000000:role/motorlog-ecs-task-execution-role",
+    "taskRoleArn":  "arn:aws:iam::000000000000:role/motorlog-ecs-task-role",
+    "containerDefinitions":  [
+                                 {
+                                     "name":  "motorlog-backend",
+                                     "image":  "motorlog-backend:scale-security",
+                                     "essential":  true,
+                                     "portMappings":  [
+                                                          {
+                                                              "containerPort":  3000,
+                                                              "protocol":  "tcp"
+                                                          }
+                                                      ],
+                                     "environment":  [
+                                                         {
+                                                             "name":  "AWS_ENDPOINT_URL",
+                                                             "value":  "http://floci:4566"
+                                                         },
+                                                         {
+                                                             "name":  "EVENT_BUS_NAME",
+                                                             "value":  "motorlog-event-bus"
+                                                         },
+                                                         {
+                                                             "name":  "SNS_TOPIC_ARN",
+                                                             "value":  "arn:aws:sns:us-east-1:000000000000:motorlog-notifications-topic"
+                                                         },
+                                                         {
+                                                             "name":  "APP_CONFIG_SECRET_NAME",
+                                                             "value":  "motorlog-app/config"
+                                                         }
+                                                     ],
+                                     "secrets":  [
+                                                     {
+                                                         "name":  "RATE_LIMIT_KEY_SECRET",
+                                                         "valueFrom":  "arn:aws:secretsmanager:us-east-1:000000000000:secret:motorlog-auth/rate-limit-key-R9PEYL"
+                                                     }
+                                                 ],
+                                     "healthCheck":  {
+                                                         "command":  [
+                                                                         "CMD-SHELL",
+                                                                         "wget -qO- http://127.0.0.1:3000/api/health || exit 1"
+                                                                     ],
+                                                         "interval":  30,
+                                                         "timeout":  5,
+                                                         "retries":  3,
+                                                         "startPeriod":  10
+                                                     },
+                                     "logConfiguration":  {
+                                                              "logDriver":  "awslogs",
+                                                              "options":  {
+                                                                              "awslogs-group":  "/motorlog/ecs",
+                                                                              "awslogs-region":  "us-east-1",
+                                                                              "awslogs-stream-prefix":  "backend"
+                                                                          }
+                                                          }
+                                 }
+                             ]
+}

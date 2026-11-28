@@ -1,0 +1,7 @@
+{
+    "Description":  "OAC for the private Motorlog frontend bucket",
+    "Name":  "motorlog-frontend-oac",
+    "OriginAccessControlOriginType":  "s3",
+    "SigningBehavior":  "always",
+    "SigningProtocol":  "sigv4"
+}

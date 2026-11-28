@@ -1,0 +1,101 @@
+{
+    "Version":  "2012-10-17",
+    "Statement":  [
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "arn:aws:logs:us-east-1:000000000000:log-group:/aws/lambda/cml-*:*",
+                          "Action":  [
+                                         "logs:CreateLogGroup",
+                                         "logs:CreateLogStream",
+                                         "logs:PutLogEvents"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Condition":  {
+                                            "StringEquals":  {
+                                                                 "cloudwatch:namespace":  "Motorlog/Application"
+                                                             }
+                                        },
+                          "Action":  "cloudwatch:PutMetricData"
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  [
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLUsers",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLUsers/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLVehicles",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLVehicles/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLMaintenance",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLMaintenance/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLFuel",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLFuel/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLExpenses",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLExpenses/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLReminders",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLReminders/index/*",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLAudit",
+                                           "arn:aws:dynamodb:us-east-1:000000000000:table/CMLAudit/index/*"
+                                       ],
+                          "Action":  [
+                                         "dynamodb:GetItem",
+                                         "dynamodb:PutItem",
+                                         "dynamodb:UpdateItem",
+                                         "dynamodb:DeleteItem",
+                                         "dynamodb:BatchWriteItem",
+                                         "dynamodb:Query",
+                                         "dynamodb:Scan",
+                                         "dynamodb:DescribeTable"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "s3:ListBucket",
+                                         "apigateway:GET",
+                                         "lambda:GetFunction",
+                                         "iam:GetRole",
+                                         "cloudwatch:DescribeAlarms",
+                                         "scheduler:GetSchedule",
+                                         "cloudfront:ListDistributions",
+                                         "elasticloadbalancing:DescribeLoadBalancers"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  [
+                                         "cognito-idp:SignUp",
+                                         "cognito-idp:ConfirmSignUp",
+                                         "cognito-idp:ResendConfirmationCode",
+                                         "cognito-idp:InitiateAuth",
+                                         "cognito-idp:RespondToAuthChallenge",
+                                         "cognito-idp:ForgotPassword",
+                                         "cognito-idp:ConfirmForgotPassword",
+                                         "cognito-idp:GlobalSignOut",
+                                         "cognito-idp:GetUser",
+                                         "cognito-idp:ListUsers",
+                                         "cognito-idp:ListUsersInGroup",
+                                         "cognito-idp:AdminListGroupsForUser",
+                                         "cognito-idp:AdminEnableUser",
+                                         "cognito-idp:AdminDisableUser",
+                                         "cognito-idp:AdminAddUserToGroup",
+                                         "cognito-idp:AdminRemoveUserFromGroup",
+                                         "cognito-idp:AdminDeleteUser",
+                                         "cognito-idp:DescribeUserPool"
+                                     ]
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "arn:aws:sqs:us-east-1:000000000000:cml-reminder-notifications",
+                          "Action":  "sqs:GetQueueAttributes"
+                      },
+                      {
+                          "Effect":  "Allow",
+                          "Resource":  "*",
+                          "Action":  "ses:GetAccount"
+                      }
+                  ]
+}

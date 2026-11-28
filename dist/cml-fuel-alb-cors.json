@@ -1,0 +1,19 @@
+{
+    "Variables":  {
+                      "CORS_ORIGINS":  "http://localhost:3000,http://localhost:8080,http://localhost:4566,http://motorlog-frontend.s3-website.localhost.localstack.cloud:4566,http://ea1pobq5gck8c5.cloudfront.localhost.localstack.cloud:4566,http://motorlog-alb-66aa88404b674e86.elb.localhost.floci.io:4510",
+                      "AWS_SECRET_ACCESS_KEY":  "test",
+                      "AWS_REGION":  "us-east-1",
+                      "AWS_ACCESS_KEY_ID":  "test",
+                      "TABLE_PREFIX":  "CML",
+                      "REQUIRE_MFA":  "true",
+                      "RATE_LIMIT_KEY_SECRET":  "/EjTBPgqBFDabyRd7I3s+qNX/uXEkXTObxTh2sOID6M=",
+                      "COGNITO_ISSUER":  "http://localhost:4566/us-east-1_28d4c2c2c",
+                      "NODE_ENV":  "production",
+                      "COGNITO_APP_CLIENT_ID":  "0aab9cc75d24472b9b3336e476",
+                      "SES_FROM_EMAIL":  "no-reply@car-maintenance.local",
+                      "COGNITO_JWKS_URL":  "http://host.docker.internal:4566/us-east-1_28d4c2c2c/.well-known/jwks.json",
+                      "AWS_ENDPOINT_URL":  "http://host.docker.internal:4566",
+                      "COGNITO_USER_POOL_ID":  "us-east-1_28d4c2c2c",
+                      "NOTIFICATION_QUEUE_URL":  ""
+                  }
+}

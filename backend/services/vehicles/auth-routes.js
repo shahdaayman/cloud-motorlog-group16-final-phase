@@ -1,16 +1,19 @@
 const express=require('express');
 const {createAuthRateLimiter,shouldRateLimitAuthRequest}=require('./auth-rate-limit');
-const {CognitoIdentityProviderClient,SignUpCommand,ConfirmSignUpCommand,ResendConfirmationCodeCommand,InitiateAuthCommand,RespondToAuthChallengeCommand,GlobalSignOutCommand,ForgotPasswordCommand,ConfirmForgotPasswordCommand}=require('@aws-sdk/client-cognito-identity-provider');
+const {CognitoIdentityProviderClient,SignUpCommand,ConfirmSignUpCommand,ResendConfirmationCodeCommand,InitiateAuthCommand,RespondToAuthChallengeCommand,GlobalSignOutCommand,GetUserCommand,ForgotPasswordCommand,ConfirmForgotPasswordCommand}=require('@aws-sdk/client-cognito-identity-provider');
 const {awsOptions,appClientId,userPoolId,requireMfa}=require('../../shared/config');
 const {asyncRoute,bad,unauthorized}=require('../../shared/errors');
 const db=require('../../shared/db');
-const {randomUUID}=require('node:crypto');
+const {randomUUID,createHash}=require('node:crypto');
 const {requireDeleteConfirmation,assertAdminSafety,permanentlyDelete}=require('./account-deletion');
 const {email,str}=require('../../shared/validate');
 const {authenticate}=require('../../shared/auth');
 const router=express.Router();
 const idp=new CognitoIdentityProviderClient(awsOptions);
 const limiter=createAuthRateLimiter();
+const recentLoginAt=new Map();
+const correlation=session=>session?createHash('sha256').update(session).digest('hex').slice(0,12):null;
+const authLog=(stage,details={})=>console.log(JSON.stringify({type:'authentication_flow',stage,...details}));
 router.use((req,res,next)=>shouldRateLimitAuthRequest(req)?limiter(req,res,next):next());
 function requireConfig(){if(!appClientId||!userPoolId)throw new Error('COGNITO_APP_CLIENT_ID and COGNITO_USER_POOL_ID are required');}
 function authReply(output){
@@ -41,7 +44,8 @@ router.post('/auth/resend-confirmation',asyncRoute(async(req,res)=>{
 }));
 router.post('/auth/login',asyncRoute(async(req,res)=>{
   requireConfig();const username=email(req.body?.email);const password=str(req.body?.password,'password',1,128);
-  let result;try{result=await idp.send(new InitiateAuthCommand({ClientId:appClientId,AuthFlow:'USER_PASSWORD_AUTH',AuthParameters:{USERNAME:username,PASSWORD:password}}));}catch(e){if(e.name==='UserNotConfirmedException'){e.status=403;e.code='ACCOUNT_NOT_CONFIRMED';e.message='Finish email verification before signing in.';}throw e;}
+  const now=Date.now(),duplicate=now-(recentLoginAt.get(username)||0)<5000;recentLoginAt.set(username,now);if(recentLoginAt.size>500)for(const [key,time] of recentLoginAt)if(now-time>15*60*1000)recentLoginAt.delete(key);
+  let result;try{result=await idp.send(new InitiateAuthCommand({ClientId:appClientId,AuthFlow:'USER_PASSWORD_AUTH',AuthParameters:{USERNAME:username,PASSWORD:password}}));authLog('login_challenge_received',{challengeName:result.ChallengeName||null,sessionReturned:Boolean(result.Session),correlationId:correlation(result.Session),duplicateLoginRequest:duplicate,httpStatus:200});}catch(e){authLog('login_failed',{exceptionName:e.name||'Error',duplicateLoginRequest:duplicate,httpStatus:e.status||401});if(e.name==='UserNotConfirmedException'){e.status=403;e.code='ACCOUNT_NOT_CONFIRMED';e.message='Finish email verification before signing in.';}throw e;}
   res.json(authReply(result));
 }));
 router.post('/auth/verify-otp',asyncRoute(async(req,res)=>{
@@ -49,12 +53,15 @@ router.post('/auth/verify-otp',asyncRoute(async(req,res)=>{
   const challenge=str(req.body?.challenge||'EMAIL_OTP','challenge',4,32);
   const codeFields={EMAIL_OTP:'EMAIL_OTP_CODE',SMS_MFA:'SMS_MFA_CODE',SOFTWARE_TOKEN_MFA:'SOFTWARE_TOKEN_MFA_CODE'};
   if(!codeFields[challenge])throw bad('Unsupported OTP challenge');
-  const result=await idp.send(new RespondToAuthChallengeCommand({ClientId:appClientId,ChallengeName:challenge,Session:session,ChallengeResponses:{USERNAME:username,[codeFields[challenge]]:code}}));
+  const correlationId=correlation(session);authLog('otp_verification_started',{challengeName:challenge,sessionSupplied:true,correlationId});
+  let result;try{result=await idp.send(new RespondToAuthChallengeCommand({ClientId:appClientId,ChallengeName:challenge,Session:session,ChallengeResponses:{USERNAME:username,[codeFields[challenge]]:code}}));}catch(e){authLog('otp_verification_failed',{challengeName:challenge,sessionSupplied:true,correlationId,exceptionName:e.name||'Error',httpStatus:e.status||401});throw e;}
   if(!result.AuthenticationResult)throw unauthorized('OTP verification not complete');
+  authLog('otp_verification_succeeded',{challengeName:challenge,sessionSupplied:true,correlationId,httpStatus:200});
   res.json({accessToken:result.AuthenticationResult.AccessToken,idToken:result.AuthenticationResult.IdToken,expiresIn:result.AuthenticationResult.ExpiresIn,mfaVerified:true});
 }));
 router.post('/auth/forgot-password',asyncRoute(async(req,res)=>{requireConfig();const username=email(req.body?.email);await idp.send(new ForgotPasswordCommand({ClientId:appClientId,Username:username}));res.json({message:'If the account exists, a reset code was sent.'});}));
 router.post('/auth/reset-password',asyncRoute(async(req,res)=>{requireConfig();const username=email(req.body?.email);const code=str(req.body?.code,'code',4,10);const password=str(req.body?.password,'password',12,128);await idp.send(new ConfirmForgotPasswordCommand({ClientId:appClientId,Username:username,ConfirmationCode:code,Password:password}));res.json({message:'Password updated'});}));
+router.get('/auth/session',authenticate,asyncRoute(async(req,res)=>{await idp.send(new GetUserCommand({AccessToken:req.user.accessToken}));res.json({authenticated:true,email:req.user.email,isAdmin:req.user.isAdmin,groups:req.user.groups,expiresAt:req.user.tokenExpiresAt});}));
 router.post('/auth/logout',authenticate,asyncRoute(async(req,res)=>{await idp.send(new GlobalSignOutCommand({AccessToken:req.user.accessToken}));res.status(204).end();}));
 router.delete('/auth/account',authenticate,asyncRoute(async(req,res)=>{
   requireDeleteConfirmation(req.body);

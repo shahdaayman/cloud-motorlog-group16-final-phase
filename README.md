@@ -1,388 +1,425 @@
-# Motorlog — Setup, Run and Test
+# Motorlog — Setup, Run, and Verify
 
 **Group 16 · Cloud Computing & Cloud Security · BUE · 2026–2027**
 
-Motorlog is a vehicle maintenance web application using HTML, CSS, JavaScript, Node.js/Express and AWS-compatible services simulated locally with **Floci**. Follow the commands **in order** in **Windows PowerShell**, from the folder containing `package.json`.
+Follow these steps **in Windows PowerShell**.
 
-## 1. Requirements (install once)
+## 1. Install prerequisites and Node modules
 
-Install **Node.js 22+**, **Docker Desktop**, **AWS CLI v2**, **Git for Windows**, and **PowerShell**. Start Docker Desktop before continuing.
-
-Check each installation:
+Install **Node.js 22+**, **Docker Desktop** (Linux containers), **AWS CLI v2**, **Git for Windows**, and **PowerShell**. Start Docker Desktop.
 
 ```powershell
-
 node --version
-
 npm --version
-
 git --version
-
 docker --version
-
 aws --version
-
 docker info
-
 ```
 
-## 2. Get the project and install Node modules
-
 ```powershell
-
 git clone https://github.com/shahdaayman/cloud-motorlog-group16-final-phase.git
-
 cd cloud-motorlog-group16-final-phase
-
 npm ci
-
 npm ci --prefix smtp-bridge
-
 ```
 
-## 3. Create the local configuration
+## 2. Configure the local environment
 
 ```powershell
-
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
 ```
 
-Check the template settings. Floci uses `http://localhost:4566`, region `us-east-1`, and **dummy local AWS credentials** (`test` / `test`). Preserve the other variables provided in the template.
-
-Configure the AWS CLI profile for the emulator:
-
 ```powershell
-
 aws configure set aws_access_key_id test --profile floci
-
 aws configure set aws_secret_access_key test --profile floci
-
 aws configure set region us-east-1 --profile floci
-
 ```
 
-## 4. Start Floci and choose email mode
-
-**Option A — Local SES:** OTP emails can be viewed in the local SES viewer. Gmail credentials are not required.
+**Check (after starting Floci in Step 3):**
 
 ```powershell
-
-docker compose -f infra/floci/docker-compose.yml up -d --wait
-
+aws --profile floci --endpoint-url http://localhost:4566 sts get-caller-identity
 ```
 
-**Option B — Gmail OTP (optional):** Choose this instead of Option A if you want Motorlog to send actual OTP messages to approved Gmail inboxes.
+## 3. Start Floci and choose OTP email delivery
 
-### Step 4B.1 — Enable Google's 2-Step Verification
+### Option A — Local SES capture (no Gmail password)
 
-1. Sign in to the **Google Account that will send Motorlog emails**.
-2. Open **https://myaccount.google.com/security**.
-3. Under **How you sign in to Google**, open **2-Step Verification**.
-4. Follow the instructions to enable 2-Step Verification. If it is already enabled, continue to the next step.
+```powershell
+docker compose -f infra/floci/docker-compose.yml up -d --wait
+```
 
-### Step 4B.2 — Generate a Gmail App Password
+**Check:**
 
-1. Open **https://myaccount.google.com/apppasswords** while signed in to the same account.
-2. If prompted, sign in again.
-3. Enter an app name such as **Motorlog SMTP**, then select **Create**.
-4. Google will display a **16-character App Password**. Copy it for the next step. This is **not** your normal Gmail login password.
-5. Keep this password private. Do not send it to teammates, paste it into reports or screenshots, or commit it to GitHub.
+```powershell
+curl.exe -i http://localhost:4566/_floci/health
+docker compose -f infra/floci/docker-compose.yml ps
+```
 
-If **App Passwords** is unavailable, Google may restrict it for certain work/school accounts, Advanced Protection accounts, or accounts with 2-Step Verification configured only with security keys. See [Google's App Password help](https://support.google.com/accounts/answer/185833) for details. In that case, use local SES mode or a suitable account that supports App Passwords.
+**Expected:** `HTTP/1.1 200 OK` 
 
-### Step 4B.3 — Add the credentials to Motorlog
+### Option B — Gmail SMTP (real OTP emails)
 
-From the project root in PowerShell, run:
+**B1. Enable Google 2-Step Verification:** Sign in to the *sending* Gmail account, visit <https://myaccount.google.com/security>, and enable **2-Step Verification** under **How you sign in to Google**.
+
+**B2. Create an App Password:** Visit <https://myaccount.google.com/apppasswords> with the same account, enter a name such as **Motorlog SMTP**, select **Create**, and copy the generated 16-character App Password.
+
+**B3. Save private configuration:**
 
 ```powershell
 if (-not (Test-Path smtp.env)) { Copy-Item smtp.env.example smtp.env }
 notepad smtp.env
 ```
 
-Only run `Copy-Item` if you have not already created `smtp.env`, so you don't replace a working configuration. In `smtp.env`, fill in these entries and **keep any other template settings unchanged**:
+Set these entries using your own details (do not publish the values):
 
 ```dotenv
 SMTP_EMAIL=your-sending-address@gmail.com
-SMTP_APP_PASSWORD=your-16-character-google-app-password
-SMTP_ALLOWED_RECIPIENTS=your-test-recipient@gmail.com
-SMTP_ALLOW_ANY_RECIPIENT=false
+SMTP_APP_PASSWORD=your-16-character-app-password
+SMTP_ALLOW_ANY_RECIPIENT=true
 ```
-
-- `SMTP_EMAIL`: the Gmail account used to send OTP emails.
-- `SMTP_APP_PASSWORD`: the App Password generated in Step 4B.2, **not** your regular Google password. Paste the generated password as a single value, without display spaces.
-- `SMTP_ALLOWED_RECIPIENTS`: the email addresses authorized to receive test messages (follow the format in `smtp.env.example` if adding multiple addresses).
-- `SMTP_ALLOW_ANY_RECIPIENT=false`: keeps delivery restricted to your approved recipients.
-
-Save and close Notepad. `smtp.env` is private and should remain ignored by Git. Never share its contents.
-
-### Step 4B.4 — Start Floci with Gmail delivery
+**B4. Start the SMTP bridge and Floci:**
 
 ```powershell
 docker compose --env-file smtp.env -f infra/floci/docker-compose.yml -f infra/floci/docker-compose.gmail.yml up -d --build --wait
 ```
 
-Then continue with **Step 5** (database and authentication initialization) if this is a new Floci environment. Once the application is configured, run:
+**Check:**
 
 ```powershell
-.\start-motorlog.ps1 --email-mode gmail
+docker compose --env-file smtp.env -f infra/floci/docker-compose.yml -f infra/floci/docker-compose.gmail.yml ps
+curl.exe -i http://localhost:4566/_floci/health
 ```
 
-### Step 4B.5 — Test real email delivery
-
-After the application is running, open the deployed Motorlog frontend, register with an allowed test recipient, and confirm that the OTP arrives in its inbox. Also check the Spam folder. Alternatively, for a non-OTP SMTP test to an authorized recipient, use:
+**Test an email inbox with:**
 
 ```powershell
 .\start-motorlog.ps1 --email-mode gmail --test-email your-test-recipient@gmail.com
 ```
 
-The bridge uses the internal Docker hostname `motorlog-smtp-bridge` on port `1025`, then Gmail's SMTP submission with TLS. If delivery fails, inspect bridge status/logs without printing `smtp.env` or OTP values.
-
-## 5. Initialize the database and authentication
-
-Run these **once on a new, empty Floci environment**:
+## 4. Initialize DynamoDB and Cognito (fresh Floci only)
 
 ```powershell
-
 npm run db:prepare
-
-npm run auth:setup
-
-node scripts/update-otp-email.js
-
 ```
 
-Verify DynamoDB tables:
+**Check — DynamoDB:**
 
 ```powershell
-
 aws --profile floci --endpoint-url http://localhost:4566 dynamodb list-tables
-
 ```
 
-Expected application tables: `CMLUsers`, `CMLVehicles`, `CMLMaintenance`, `CMLFuel`, `CMLExpenses`, `CMLReminders`, `CMLAudit`, `CMLAuthRateLimits`.
-
-Verify the Cognito user pool:
+**Expected:** `TableNames` includes **all eight**: `CMLUsers`, `CMLVehicles`, `CMLMaintenance`, `CMLFuel`, `CMLExpenses`, `CMLReminders`, `CMLAudit`, `CMLAuthRateLimits`.
 
 ```powershell
+npm run auth:setup
+node scripts/update-otp-email.js
+```
 
+**Check — Cognito:**
+
+```powershell
 aws --profile floci --endpoint-url http://localhost:4566 cognito-idp list-user-pools --max-results 60
-
 ```
 
-## 6. Deploy the full cloud architecture
+**Expected:** `UserPools` contains the Motorlog pool (named `CML-Group16-Users`). 
 
-Deploy the project resources in dependency order.
+## 5. Deploy Lambda → IAM → API Gateway (corrected order)
 
-### 6A. IAM, Lambda and API Gateway
+### 5A. Lambda functions
 
 ```powershell
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-iam-security.ps1
-
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-lambdas.ps1
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-api.ps1
-
 ```
 
-### 6B. S3 and CloudFront frontend
+**Check — Lambda state:**
 
 ```powershell
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-s3-frontend.ps1
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-cloudfront.ps1
-
+aws --profile floci --endpoint-url http://localhost:4566 lambda list-functions --query "Functions[].[FunctionName,State,Role]" --output table
 ```
 
-### 6C. Reminders, queues and monitoring
+**Expected:** Three entries, all `Active`:
+
+```text
+cml-vehicles   Active   arn:aws:iam::000000000000:role/motorlog-vehicles-runtime
+cml-fuel       Active   arn:aws:iam::000000000000:role/motorlog-fuel-runtime
+cml-reminders  Active   arn:aws:iam::000000000000:role/motorlog-reminders-runtime
+```
+### 5B. Dedicated IAM roles
 
 ```powershell
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-reminder-automation.ps1
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-monitoring.ps1
-
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-iam-security.ps1
 ```
 
-### 6D. Load balancer, ECS, scaling and additional services
-
-**The ALB must be deployed before the scaling/security stack.** The scaling script also sets up SNS, EventBridge audit integration and Secrets Manager.
+**Check — IAM and Lambda role assignments:**
 
 ```powershell
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-alb.ps1
-
-npm run cloud-services:deploy
-
-```
-
-> Some scripts depend on locally built images, running target processes, available networking, and resources produced by earlier steps. If a deployment fails, resolve that prerequisite before moving on.
-
-## 7. Start Motorlog with one command
-
-Once the environment is configured:
-
-```powershell
-
-.\start-motorlog.ps1 --email-mode local
-
-```
-
-Or, if you configured `smtp.env` for Gmail:
-
-```powershell
-
-.\start-motorlog.ps1 --email-mode gmail
-
-```
-
-To open the deployed CloudFront frontend automatically:
-
-```powershell
-
-.\start-motorlog.ps1 --open
-
-```
-
-## 8. Test each cloud component
-
-Run these commands after deploying the corresponding resources:
-
-\| Service or component | Verification command | What to look for |
-
-\|---|---|---|
-
-\| Floci | `curl.exe http://localhost:4566/\_floci/health` | Healthy response |
-
-\| DynamoDB | `aws --profile floci --endpoint-url http://localhost:4566 dynamodb list-tables` | Eight Motorlog tables |
-
-\| Cognito | `aws --profile floci --endpoint-url http://localhost:4566 cognito-idp list-user-pools --max-results 60` | Motorlog user pool |
-
-\| SES | Open `http://localhost:4566/\_aws/ses` | Captured email after a test sign-up/login |
-
-\| Lambda | `aws --profile floci --endpoint-url http://localhost:4566 lambda list-functions` | Deployed application functions |
-
-\| API Gateway | `aws --profile floci --endpoint-url http://localhost:4566 apigateway get-rest-apis` | Motorlog REST API; manager checks its health route |
-
-\| S3 | `npm run s3:verify` | Frontend bucket/assets verified |
-
-\| CloudFront | `npm run cloudfront:verify` | Deployed distribution serves Motorlog |
-
-\| ALB | `npm run alb:verify` | Targets and ALB checks pass |
-
-\| ECS | `aws --profile floci --endpoint-url http://localhost:4566 ecs list-clusters` | Motorlog cluster; manager checks running vs desired tasks |
-
-\| Application Auto Scaling | `aws --profile floci --endpoint-url http://localhost:4566 application-autoscaling describe-scalable-targets --service-namespace ecs` | Configured ECS scalable target |
-
-\| EventBridge Scheduler / SQS | `npm run reminders:status` | Reminder scheduler/queue configuration |
-
-\| CloudWatch | `npm run monitoring:status` | Logs, metrics and alarms checks |
-
-\| IAM | `npm run iam:verify` | Role/policy checks (emulator enforcement may be limited) |
-
-\| EventBridge, SNS, Secrets Manager | `npm run cloud-services:verify` | Additional cloud resource and event-flow checks |
-
-For extra visibility, use these read-only CLI checks:
-
-```powershell
-
-aws --profile floci --endpoint-url http://localhost:4566 sqs list-queues
-
-aws --profile floci --endpoint-url http://localhost:4566 events list-event-buses
-
-aws --profile floci --endpoint-url http://localhost:4566 sns list-topics
-
-aws --profile floci --endpoint-url http://localhost:4566 secretsmanager list-secrets
-
-aws --profile floci --endpoint-url http://localhost:4566 cloudfront list-distributions
-
-```
-
-## 9. Run all tests and verify the complete project
-
-```powershell
-
-npm run check
-
-npm run smtp:test
-
-npm run smoke
-
-npm run s3:verify
-
-npm run cloudfront:verify
-
-npm run alb:verify
-
-npm run reminders:status
-
-npm run monitoring:status
-
 npm run iam:verify
-
-npm run cloud-services:verify
-
-.\start-motorlog.ps1 --verify
-
+aws --profile floci --endpoint-url http://localhost:4566 lambda list-functions --query "Functions[].[FunctionName,State,Role]" --output table
 ```
 
-## 10. Test the application in your browser
+**Expected:** IAM verification passes and all three Lambda functions report `Active` with their matching dedicated `motorlog-*-runtime` roles.
 
-1\. Open the **CloudFront frontend URL printed by** `.\start-motorlog.ps1`.
-
-2\. Register a new test account, confirm it with the emailed code (SES viewer in local mode; Gmail inbox in Gmail mode), then log in using the sign-in OTP.
-
-3\. Add a vehicle and test VIN decoding (requires internet), maintenance, fuel, expenses, reminders and analytics.
-
-4\. Refresh and check whether the signed-in session persists as expected.
-
-5\. With a separate test account, confirm it cannot see another user's data; a regular user should receive `403` from protected Admin APIs.
-
-6\. Test the Admin Console with a confirmed test account assigned the `Admin` role through your local Cognito setup.
-
-## 11. Daily commands (after setup)
+### 5C. API Gateway
 
 ```powershell
-
-.\start-motorlog.ps1                 # start required services and show deployed URLs
-
-.\start-motorlog.ps1 --open          # start and open deployed CloudFront frontend
-
-.\start-motorlog.ps1 --status        # show statuses without changes
-
-.\start-motorlog.ps1 --verify        # run project verification
-
-.\stop-motorlog.ps1                  # stop only manager-owned services
-
-.\stop-motorlog.ps1 --status         # read-only shutdown/ownership status
-
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-api.ps1
 ```
 
-**Note:** If a service was already running before the manager started, the stop command deliberately treats it as shared and may leave it running. It never deletes DynamoDB records, users, Docker volumes or cloud resources.
+**Check — discover your API ID (it will differ on each machine):**
 
-## 12. Quick fixes
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 apigateway get-rest-apis --query "items[].[name,id]" --output table
+$ApiId = aws --profile floci --endpoint-url http://localhost:4566 apigateway get-rest-apis --query "items[?name=='motorlog-api'].id | [0]" --output text
+Write-Host "Motorlog API ID: $ApiId"
+```
 
-\| Problem | What to do |
+**Expected:** A row containing `motorlog-api` and a generated ID, for example `07be393592`.
 
-\|---|---|
+**Check — deployed stages:**
 
-\| Docker unavailable | Start Docker Desktop; rerun `docker info` |
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 apigateway get-stages --rest-api-id $ApiId
+```
 
-\| Node/AWS not detected when using `bash` in PowerShell | Use `.\start-motorlog.ps1`, not WSL's `bash` |
+**Expected:** An `item` entry with `stageName: "dev"` and a nonempty `deploymentId`.
 
-\| Gmail mode says `smtp.env` missing | Copy `smtp.env.example` to ignored `smtp.env`, configure your own credentials, and rerun Gmail mode |
+**Fix if the API exists but the response is `{"item":[]}` or `/api/health` says `{"message":"Stage not found"}`:**
 
-\| OTP isn't received | Check SES viewer, bridge health, the approved recipients and SMTP networking |
+1. First inspect the `deploy-api.ps1` output. A missing Lambda `GetPolicy` resource can be normal at **first-run**, but other errors may mean the routes or permissions were not configured.
+2. Confirm that the API resources and methods were created:
 
-\| CloudFront URL missing | Deploy S3 and CloudFront (Step 6B), then rerun manager |
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 apigateway get-resources --rest-api-id $ApiId
+```
 
-\| API Gateway unavailable | Check Lambda and API deployment (Step 6A) |
+**Expected:** Resources for the intended API routes, not just the root `/`. If resources are missing, fix/re-run `scripts/deploy-api.ps1` before creating a stage.
 
-\| ECS not running | Check ALB and scaling deployment (Step 6D), task counts and container health |
+3. If the routes and permissions are configured but `dev` is missing, create its deployment:
 
-\| Test script fails on fresh clone | Confirm the corresponding service was actually deployed; see Steps 6–9 |
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 apigateway create-deployment --rest-api-id $ApiId --stage-name dev --description "Motorlog initial API deployment"
+aws --profile floci --endpoint-url http://localhost:4566 apigateway get-stages --rest-api-id $ApiId
+```
 
-For troubleshooting commands and architectural details, see `docs/`, the deployment scripts and `infra/architecture.md`.
+**Expected:** The first command returns a generated deployment `id`; the second shows a `dev` stage referring to that deployment.
 
-**---**
+**Final API health check:**
+
+```powershell
+curl.exe -i "http://${ApiId}.execute-api.localhost.localstack.cloud:4566/dev/api/health"
+```
+
+**Expected:** `HTTP/1.1 200 OK` and JSON similar to:
+
+```json
+{"status":"ok","service":"vehicles","runtime":"lambda","timestamp":"<generated timestamp>"}
+```
+
+This verifies the API Gateway → vehicles Lambda health path. Fuel and reminders require separate route checks.
+
+## 6. Deploy the remaining cloud services and check each one
+
+### 6A. Amazon S3 (frontend hosting)
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-s3-frontend.ps1
+npm run s3:verify
+```
+
+### 6B. Amazon CloudFront
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-cloudfront.ps1
+npm run cloudfront:verify
+```
+
+### 6C. Automatic reminder confirmation and deadline emails (EventBridge Scheduler, SQS, Lambda, SES)
+
+**Prerequisites:** Deploy the `cml-reminders` Lambda and configure DynamoDB, Cognito, the notification SQS queue and event-source mapping, SES, and the Gmail SMTP bridge (Step 3, Option B) to deliver to a real inbox. The Floci and SMTP bridge containers must remain running for local email delivery.
+
+On a **fresh installation**, deploy the reminder automation:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-reminder-automation.ps1
+```
+
+On an **existing installation**, inspect and enable the daily schedule as needed:
+
+```powershell
+npm run reminders:status
+npm run reminders:enable
+```
+#### How notifications work
+
+1. **Immediately after a reminder is created:** The backend persists the reminder, queues a `REMINDER_CREATED` confirmation through **SQS → Lambda → SES → Gmail SMTP bridge**, and the UI reports that the email was queued. The subject is **Motorlog — Reminder Created Successfully**. Recipient email is resolved and verified through Cognito, not accepted from the browser.
+2. **One Cairo calendar day before the due date:** For an eligible **open** reminder, the 9:00 AM scheduled check queues a second email with subject **Motorlog — Maintenance Due Tomorrow**. For example, a reminder due **December 10** is eligible for the scheduled email on **December 9 at 9:00 AM Cairo time**.
+3. **Late-created reminders:** If created after the previous day's 9:00 AM window, or when already due/overdue, the confirmation still describes the due date accurately; the application does not promise a pre-deadline notification whose window has already passed. Reminders with no date do not receive date-based deadline emails.
+
+**Inspect or pause/resume automatic reminders:**
+
+```powershell
+npm run reminders:status
+npm run reminders:disable
+npm run reminders:enable
+aws --profile floci --endpoint-url http://localhost:4566 sqs list-queues
+aws --profile floci --endpoint-url http://localhost:4566 scheduler list-schedules
+```
+### 6D. Amazon CloudWatch
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-monitoring.ps1
+npm run monitoring:status
+```
+### 6E. Application Load Balancer (ALB)
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-alb.ps1
+npm run alb:verify
+```
+### 6F. ECS, Application Auto Scaling, SNS, EventBridge audit bus, and Secrets Manager
+
+```powershell
+npm run cloud-services:deploy
+```
+
+Now verify the individual services:
+
+**ECS:**
+
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 ecs list-clusters
+aws --profile floci --endpoint-url http://localhost:4566 ecs describe-services --cluster motorlog-cluster --services motorlog-backend-service --query "services[].[status,runningCount,desiredCount]" --output table
+```
+
+**Application Auto Scaling:**
+
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 application-autoscaling describe-scalable-targets --service-namespace ecs
+```
+
+**SNS:**
+
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 sns list-topics
+```
+
+**Expected:** `motorlog-notifications-topic` appears among topic ARNs.
+
+**EventBridge (audit pipeline):**
+
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 events list-event-buses
+npm run cloud-services:verify
+```
+
+**Secrets Manager:**
+
+```powershell
+aws --profile floci --endpoint-url http://localhost:4566 secretsmanager list-secrets --query "SecretList[].Name" --output table
+```
+
+
+**Check:**
+
+```powershell
+npm run check
+npm run smtp:test
+```
+
+## 7. Start Motorlog and check deployed links
+
+For local SES mode:
+
+```powershell
+.\start-motorlog.ps1 --email-mode local
+```
+
+For Gmail mode:
+
+```powershell
+.\start-motorlog.ps1 --email-mode gmail
+```
+
+Open the deployed frontend automatically:
+
+```powershell
+.\start-motorlog.ps1 --open
+```
+
+## 8. Create an Admin account (Cognito)
+
+**Prerequisites:** Complete Step 4 (Cognito setup) and deploy the API and frontend. Use a dedicated test account that you control. There is no default admin password and **normal signup does not automatically grant Admin privileges**.
+
+**1. Register and confirm a normal account** through the Motorlog CloudFront website. Complete the signup confirmation email/OTP process before granting administrator access.
+
+**2. Discover the actual Cognito user pool** in your own Floci installation (the pool ID varies):
+
+```powershell
+$Endpoint = 'http://localhost:4566'
+$Pools = @( (aws --profile floci --endpoint-url $Endpoint cognito-idp list-user-pools --max-results 60 | ConvertFrom-Json).UserPools | Where-Object { $_.Name -eq 'CML-Group16-Users' } )
+if ($Pools.Count -ne 1) { throw 'Expected one Motorlog user pool. Run npm run auth:setup, then check cognito-idp list-user-pools.' }
+$PoolId = $Pools[0].Id
+Write-Host "Motorlog pool ID: $PoolId"
+```
+
+**3. Find the confirmed account** by its registration email. Enter the address you actually registered:
+
+```powershell
+$AdminEmail = Read-Host 'Email of the confirmed account to promote'
+$Users = @((aws --profile floci --endpoint-url $Endpoint cognito-idp list-users --user-pool-id $PoolId --filter ('email = "{0}"' -f $AdminEmail) | ConvertFrom-Json).Users)
+if ($Users.Count -ne 1) { throw 'Expected exactly one account with this email. Confirm signup before continuing.' }
+$AdminUser = $Users[0]
+if ($AdminUser.UserStatus -ne 'CONFIRMED') { throw 'Account is not CONFIRMED. Complete signup confirmation first.' }
+Write-Host "Confirmed Cognito username: $($AdminUser.Username)"
+```
+
+**4. Verify the Admin group exists, then add this account to it:**
+
+```powershell
+$Groups = @((aws --profile floci --endpoint-url $Endpoint cognito-idp list-groups --user-pool-id $PoolId | ConvertFrom-Json).Groups)
+if (-not @($Groups | Where-Object GroupName -eq 'Admin').Count) { throw 'Admin group is missing. Verify Cognito setup before proceeding.' }
+aws --profile floci --endpoint-url $Endpoint cognito-idp admin-add-user-to-group --user-pool-id $PoolId --username $AdminUser.Username --group-name Admin
+if ($LASTEXITCODE -ne 0) { throw 'Failed to assign the Admin group.' }
+```
+
+**5. Verify the group membership:**
+
+```powershell
+aws --profile floci --endpoint-url $Endpoint cognito-idp admin-list-groups-for-user --user-pool-id $PoolId --username $AdminUser.Username --query 'Groups[].GroupName' --output table
+```
+
+**Expected:** The returned groups include `Admin`.
+
+**6. Sign out and sign back in** to Motorlog with the promoted account, including its login OTP, so Cognito issues **new tokens containing the Admin group claim**.
+
+## 9. Final verification commands
+
+Run these after provisioning their corresponding resources:
+
+```powershell
+npm run check
+npm run smtp:test
+npm run smoke
+npm run s3:verify
+npm run cloudfront:verify
+npm run alb:verify
+npm run reminders:status
+npm run monitoring:status
+npm run iam:verify
+npm run cloud-services:verify
+.\start-motorlog.ps1 --verify
+```
+
+## 10. Daily commands (after setup)
+
+```powershell
+.\start-motorlog.ps1                   # start and show deployed links
+.\start-motorlog.ps1 --open            # start and open CloudFront
+.\start-motorlog.ps1 --status          # read-only status
+.\start-motorlog.ps1 --verify          # run verification
+.\stop-motorlog.ps1                    # stop manager-owned services only
+.\stop-motorlog.ps1 --status           # view shutdown/ownership status
+```

@@ -11,4 +11,9 @@ if(!process.env.MOTORLOG_API_BASE_URL){
   if(!deployment.invokeUrl)throw new Error('dist/floci-deployment.json has no invokeUrl; run npm run api:deploy');
   process.env.MOTORLOG_API_BASE_URL=deployment.invokeUrl;
 }
+const albDeploymentPath=path.join(__dirname,'..','dist','alb-deployment.json');
+if(fs.existsSync(albDeploymentPath)){
+  const alb=JSON.parse(fs.readFileSync(albDeploymentPath,'utf8'));
+  if(alb.url){const origins=(process.env.CORS_ORIGINS||'').split(',').map(x=>x.trim()).filter(Boolean);if(!origins.includes(alb.url))process.env.CORS_ORIGINS=[...origins,alb.url].join(',');}
+}
 require('../backend/dev-server').startDevServer(port);
